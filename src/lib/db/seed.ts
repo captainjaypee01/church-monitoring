@@ -295,7 +295,7 @@ async function seed() {
 }
 
 // Run the seed if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   seed()
     .then(() => {
       console.log("Seeding completed")
