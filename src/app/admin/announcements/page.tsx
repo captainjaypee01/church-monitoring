@@ -13,7 +13,7 @@ import Link from "next/link"
 export default async function AdminAnnouncementsPage() {
   const session = await auth()
   
-  if (!session?.user || !canManageAnnouncements(session.user)) {
+  if (!session?.user || !canManageAnnouncements(session)) {
     redirect("/dashboard")
   }
 

@@ -6,7 +6,7 @@ import { NewAnnouncementForm } from "@/components/announcements/new-announcement
 export default async function NewAnnouncementPage() {
   const session = await auth()
   
-  if (!session?.user || !canManageAnnouncements(session.user)) {
+  if (!session?.user || !canManageAnnouncements(session)) {
     redirect("/dashboard")
   }
 
@@ -19,7 +19,7 @@ export default async function NewAnnouncementPage() {
         </p>
       </div>
 
-      <NewAnnouncementForm currentUserId={session.user.id} />
+      <NewAnnouncementForm currentUserId={session.user.id!} />
     </div>
   )
 }

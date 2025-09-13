@@ -13,8 +13,8 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  const permissions = getUserPermissions(session.user)
-  const primaryRole = session.user.roles[0]?.role
+  const permissions = getUserPermissions(session)
+  const primaryRole = session.roles?.[0]?.role
 
   // Route to appropriate dashboard based on primary role
   switch (primaryRole) {

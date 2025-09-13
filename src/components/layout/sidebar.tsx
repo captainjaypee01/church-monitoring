@@ -75,8 +75,8 @@ export function Sidebar() {
     return null
   }
 
-  const permissions = getUserPermissions(session.user)
-  const userRoles = session.user.roles.map((role) => role.role)
+  const permissions = getUserPermissions(session)
+  const userRoles = session.roles?.map((role) => role.role) || []
 
   const hasAccess = (roles: string[]) => {
     return roles.some((role) => userRoles.includes(role as any))

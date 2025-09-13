@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const permissions = getUserPermissions(session.user)
+    const permissions = getUserPermissions(session)
 
     return NextResponse.json({
       user: session.user,

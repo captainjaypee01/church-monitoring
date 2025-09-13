@@ -44,7 +44,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const [userProfile] = await db
     .select()
     .from(profiles)
-    .where(eq(profiles.userId, session.user.id))
+    .where(eq(profiles.userId, session.user.id!))
     .limit(1)
 
   // Fetch event with creator info
@@ -96,10 +96,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   }
 
   const isUserRegistered = !!userRegistration
-  const canRegister = event.allowRegistration && 
+  const canRegister = Boolean(event.allowRegistration && 
     (!event.capacity || registrationCount < event.capacity) && 
     !isUserRegistered &&
-    userProfile
+    userProfile)
   const isPastEvent = new Date(event.startAt) < new Date()
 
   return (

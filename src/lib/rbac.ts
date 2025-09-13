@@ -11,7 +11,7 @@ export type UserRole = {
 }
 
 export type AbilityContext = {
-  user: Session["user"]
+  session: Session
   targetUserId?: string
   targetNetworkId?: string
   targetCellId?: string
@@ -24,143 +24,124 @@ export class RBACError extends Error {
   }
 }
 
-export function hasRole(user: Session["user"], role: Role): boolean {
-  return user.roles.some((userRole) => userRole.role === role)
+export function hasRole(session: Session, role: Role): boolean {
+  return session.roles?.some((userRole) => userRole.role === role) || false
 }
 
-export function hasAnyRole(user: Session["user"], roles: Role[]): boolean {
-  return user.roles.some((userRole) => roles.includes(userRole.role))
+export function hasAnyRole(session: Session, roles: Role[]): boolean {
+  return session.roles?.some((userRole) => roles.includes(userRole.role)) || false
 }
 
-export function getUserRoleInNetwork(user: Session["user"], networkId: string): UserRole | null {
-  return user.roles.find((role) => role.networkId === networkId) || null
+export function getUserRoleInNetwork(session: Session, networkId: string): UserRole | null {
+  return session.roles?.find((role) => role.networkId === networkId) || null
 }
 
-export function getUserRoleInCell(user: Session["user"], cellId: string): UserRole | null {
-  return user.roles.find((role) => role.cellId === cellId) || null
+export function getUserRoleInCell(session: Session, cellId: string): UserRole | null {
+  return session.roles?.find((role) => role.cellId === cellId) || null
 }
 
-export function isAdmin(user: Session["user"]): boolean {
-  return hasRole(user, "ADMIN")
+export function isAdmin(session: Session): boolean {
+  return hasRole(session, "ADMIN")
 }
 
-export function isNetworkLeader(user: Session["user"], networkId?: string): boolean {
-  if (hasRole(user, "ADMIN")) return true
+export function isNetworkLeader(session: Session, networkId?: string): boolean {
+  if (hasRole(session, "ADMIN")) return true
   
-  const networkRoles = user.roles.filter((role) => role.role === "NETWORK_LEADER")
+  const networkRoles = session.roles?.filter((role) => role.role === "NETWORK_LEADER") || []
   if (!networkId) return networkRoles.length > 0
   
   return networkRoles.some((role) => role.networkId === networkId)
 }
 
-export function isCellLeader(user: Session["user"], cellId?: string): boolean {
-  if (hasRole(user, "ADMIN")) return true
+export function isCellLeader(session: Session, cellId?: string): boolean {
+  if (hasRole(session, "ADMIN")) return true
+  if (isNetworkLeader(session)) return true
   
-  const cellRoles = user.roles.filter((role) => role.role === "CELL_LEADER")
+  const cellRoles = session.roles?.filter((role) => role.role === "CELL_LEADER") || []
   if (!cellId) return cellRoles.length > 0
   
   return cellRoles.some((role) => role.cellId === cellId)
 }
 
-export function canAccessCell(user: Session["user"], cellId: string): boolean {
-  // Admin can access all cells
-  if (isAdmin(user)) return true
+// Leadership scope helpers
+export function getCellIdsForUser(session: Session): string[] {
+  return session.roles
+    ?.filter((role) => role.cellId)
+    .map((role) => role.cellId!) || []
+}
+
+export function getNetworkIdsForUser(session: Session): string[] {
+  return session.roles
+    ?.filter((role) => role.networkId)
+    .map((role) => role.networkId!) || []
+}
+
+// Ability checks
+export function canViewReports(session: Session): boolean {
+  return hasRole(session, "ADMIN")
+}
+
+export function canManageEvents(session: Session): boolean {
+  return hasRole(session, "ADMIN")
+}
+
+export function canManageAnnouncements(session: Session): boolean {
+  return hasRole(session, "ADMIN")
+}
+
+export function canManageNetworks(session: Session): boolean {
+  return hasRole(session, "ADMIN")
+}
+
+export function canManageCells(session: Session): boolean {
+  return hasRole(session, "ADMIN") || isNetworkLeader(session)
+}
+
+export function canManageUsers(session: Session): boolean {
+  return hasRole(session, "ADMIN")
+}
+
+export function canLogCellMeeting(session: Session, cellId: string): boolean {
+  return hasRole(session, "ADMIN") || isNetworkLeader(session) || isCellLeader(session, cellId)
+}
+
+export function canViewCellReports(session: Session, cellId: string): boolean {
+  return hasRole(session, "ADMIN") || isNetworkLeader(session) || isCellLeader(session, cellId)
+}
+
+export function canViewNetworkReports(session: Session, networkId: string): boolean {
+  return hasRole(session, "ADMIN") || isNetworkLeader(session, networkId)
+}
+
+// Legacy function for backward compatibility
+export function getUserPermissions(session: Session) {
+  return ability({ session })
+}
+
+// Main ability function
+export function ability(context: AbilityContext) {
+  const { session } = context
   
-  // Cell leader can access their own cell
-  if (isCellLeader(user, cellId)) return true
-  
-  // Network leader can access cells in their network
-  // This would require additional logic to check if the cell belongs to their network
-  // For now, we'll implement a simplified version
-  const cellRole = getUserRoleInCell(user, cellId)
-  if (cellRole) return true
-  
-  return false
-}
-
-export function canAccessNetwork(user: Session["user"], networkId: string): boolean {
-  // Admin can access all networks
-  if (isAdmin(user)) return true
-  
-  // Network leader can access their own network
-  if (isNetworkLeader(user, networkId)) return true
-  
-  return false
-}
-
-export function canManageUsers(user: Session["user"]): boolean {
-  return isAdmin(user)
-}
-
-export function canManageEvents(user: Session["user"]): boolean {
-  return isAdmin(user)
-}
-
-export function canManageAnnouncements(user: Session["user"]): boolean {
-  return isAdmin(user)
-}
-
-export function canLogMeeting(user: Session["user"], cellId: string): boolean {
-  return canAccessCell(user, cellId)
-}
-
-export function canViewReports(user: Session["user"], scope: "global" | "network" | "cell", resourceId?: string): boolean {
-  switch (scope) {
-    case "global":
-      return isAdmin(user)
-    case "network":
-      return resourceId ? canAccessNetwork(user, resourceId) : false
-    case "cell":
-      return resourceId ? canAccessCell(user, resourceId) : false
-    default:
-      return false
-  }
-}
-
-export function canManageVolunteers(user: Session["user"]): boolean {
-  return hasAnyRole(user, ["ADMIN", "NETWORK_LEADER"])
-}
-
-export function assertPermission(condition: boolean, message = "Access denied"): void {
-  if (!condition) {
-    throw new RBACError(message)
-  }
-}
-
-export function getAccessibleCells(user: Session["user"]): string[] {
-  if (isAdmin(user)) {
-    // Admin can access all cells - this would need to be implemented differently
-    // in a real application by querying the database
-    return ["*"] // Wildcard to represent all cells
-  }
-  
-  return user.roles
-    .filter((role) => role.cellId)
-    .map((role) => role.cellId!)
-}
-
-export function getAccessibleNetworks(user: Session["user"]): string[] {
-  if (isAdmin(user)) {
-    // Admin can access all networks
-    return ["*"] // Wildcard to represent all networks
-  }
-  
-  return user.roles
-    .filter((role) => role.networkId)
-    .map((role) => role.networkId!)
-}
-
-export function getUserPermissions(user: Session["user"]) {
   return {
-    isAdmin: isAdmin(user),
-    isNetworkLeader: hasRole(user, "NETWORK_LEADER"),
-    isCellLeader: hasRole(user, "CELL_LEADER"),
-    isMember: hasRole(user, "MEMBER"),
-    canManageUsers: canManageUsers(user),
-    canManageEvents: canManageEvents(user),
-    canManageAnnouncements: canManageAnnouncements(user),
-    canManageVolunteers: canManageVolunteers(user),
-    accessibleCells: getAccessibleCells(user),
-    accessibleNetworks: getAccessibleNetworks(user),
+    canViewReports: () => canViewReports(session),
+    canManageEvents: () => canManageEvents(session),
+    canManageAnnouncements: () => canManageAnnouncements(session),
+    canManageNetworks: () => canManageNetworks(session),
+    canManageCells: () => canManageCells(session),
+    canManageUsers: () => canManageUsers(session),
+    canLogCellMeeting: (cellId: string) => canLogCellMeeting(session, cellId),
+    canViewCellReports: (cellId: string) => canViewCellReports(session, cellId),
+    canViewNetworkReports: (networkId: string) => canViewNetworkReports(session, networkId),
+    
+    // User role checks
+    isAdmin: () => isAdmin(session),
+    isNetworkLeader: (networkId?: string) => isNetworkLeader(session, networkId),
+    isCellLeader: (cellId?: string) => isCellLeader(session, cellId),
+    hasRole: (role: Role) => hasRole(session, role),
+    hasAnyRole: (roles: Role[]) => hasAnyRole(session, roles),
+    
+    // Scope helpers
+    getCellIds: () => getCellIdsForUser(session),
+    getNetworkIds: () => getNetworkIdsForUser(session),
   }
 }

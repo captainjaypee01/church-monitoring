@@ -14,7 +14,7 @@ import {
   type NewTrainingProgress,
   type NewAuditLog
 } from "@/lib/db/schema"
-import { canLogMeeting } from "@/lib/rbac"
+import { canLogCellMeeting } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { put } from "@vercel/blob"
 import { z } from "zod"
@@ -50,7 +50,7 @@ export async function logMeetingAction(formData: FormData) {
     const dataJson = formData.get("data") as string
     const groupPictureFile = formData.get("groupPicture") as File | null
 
-    if (!cellId || !canLogMeeting(session.user, cellId)) {
+    if (!cellId || !canLogCellMeeting(session, cellId)) {
       return { success: false, error: "Not authorized to log meetings for this cell" }
     }
 
@@ -81,7 +81,7 @@ export async function logMeetingAction(formData: FormData) {
       .insert(meetings)
       .values({
         cellId,
-        leaderUserId: session.user.id,
+        leaderUserId: session.user.id!,
         occurredAt: new Date(data.occurredAt),
         notes: data.notes || null,
         groupPictureUrl,

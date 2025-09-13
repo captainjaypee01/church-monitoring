@@ -23,7 +23,7 @@ export async function createAnnouncementAction(data: z.infer<typeof announcement
   try {
     const session = await auth()
     
-    if (!session?.user || !canManageAnnouncements(session.user)) {
+    if (!session?.user || !canManageAnnouncements(session)) {
       return { success: false, error: "Unauthorized" }
     }
 
@@ -38,7 +38,7 @@ export async function createAnnouncementAction(data: z.infer<typeof announcement
         body: validatedData.body,
         audience: validatedData.audience,
         publishedAt: validatedData.publishNow ? new Date() : null,
-        authorId: session.user.id,
+        authorId: session.user.id!,
       } satisfies NewAnnouncement)
       .returning()
 

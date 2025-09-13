@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { canLogMeeting } from "@/lib/rbac"
+import { canLogCellMeeting } from "@/lib/rbac"
 import { NewMeetingForm } from "@/components/meetings/new-meeting-form"
 import { db } from "@/lib/db"
 import { cells, cellMemberships, profiles, trainingLevels } from "@/lib/db/schema"
@@ -14,9 +14,9 @@ export default async function NewMeetingPage() {
   }
 
   // Get user's cell (assuming first cell for now)
-  const userCellId = session.user.roles.find(role => role.cellId)?.cellId
+  const userCellId = session.roles?.find(role => role.cellId)?.cellId
   
-  if (!userCellId || !canLogMeeting(session.user, userCellId)) {
+  if (!userCellId || !canLogCellMeeting(session, userCellId)) {
     redirect("/dashboard")
   }
 
@@ -61,7 +61,7 @@ export default async function NewMeetingPage() {
         cell={cell}
         members={cellMembers}
         trainingLevels={levels}
-        currentUserId={session.user.id}
+        currentUserId={session.user.id!}
       />
     </div>
   )

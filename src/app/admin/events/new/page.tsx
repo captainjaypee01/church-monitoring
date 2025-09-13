@@ -6,7 +6,7 @@ import { NewEventForm } from "@/components/events/new-event-form"
 export default async function NewEventPage() {
   const session = await auth()
   
-  if (!session?.user || !canManageEvents(session.user)) {
+  if (!session?.user || !canManageEvents(session)) {
     redirect("/dashboard")
   }
 
@@ -19,7 +19,7 @@ export default async function NewEventPage() {
         </p>
       </div>
 
-      <NewEventForm currentUserId={session.user.id} />
+      <NewEventForm currentUserId={session.user.id!} />
     </div>
   )
 }

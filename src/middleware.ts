@@ -22,7 +22,7 @@ export default auth((req) => {
 
   // Role-based route protection
   if (token) {
-    const userRoles = token.roles as Array<{ role: string; networkId?: string; cellId?: string }> || []
+    const userRoles = (token as any).roles as Array<{ role: string; networkId?: string; cellId?: string }> || []
     const hasRole = (role: string) => userRoles.some(r => r.role === role)
     const isAdmin = hasRole("ADMIN")
     const isNetworkLeader = hasRole("NETWORK_LEADER")

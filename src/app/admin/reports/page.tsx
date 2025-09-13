@@ -14,7 +14,7 @@ import {
   trainingProgress,
   trainingLevels
 } from "@/lib/db/schema"
-import { count, sum, eq, gte, and } from "drizzle-orm"
+import { count, sum, eq, gte, lt, and } from "drizzle-orm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,7 +33,7 @@ import Link from "next/link"
 export default async function AdminReportsPage() {
   const session = await auth()
   
-  if (!session?.user || !canViewReports(session.user, "global")) {
+  if (!session?.user || !canViewReports(session)) {
     redirect("/dashboard")
   }
 
@@ -83,7 +83,7 @@ export default async function AdminReportsPage() {
       eq(meetingAttendance.isVip, true),
       eq(meetingAttendance.present, true),
       gte(meetings.occurredAt, lastMonthStart),
-      gte(currentMonthStart, meetings.occurredAt)
+      lt(meetings.occurredAt, currentMonthStart)
     ))
 
   // Calculate VIP growth

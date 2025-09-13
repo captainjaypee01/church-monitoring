@@ -77,7 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token.id) {
         session.user.id = token.id as string
-        session.user.roles = token.roles as any || []
+        session.roles = token.roles as any || []
       }
       return session
     },
@@ -90,32 +90,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 declare module "next-auth" {
   interface Session {
     user: {
-      id: string
-      email: string
-      name: string
-      image?: string
-      roles: Array<{
-        id: string
-        userId: string
-        role: "ADMIN" | "NETWORK_LEADER" | "CELL_LEADER" | "MEMBER"
-        networkId: string | null
-        cellId: string | null
-        createdAt: Date
-      }>
+      id?: string
+      email?: string | null
+      name?: string | null
+      image?: string | null
     }
+    roles?: Array<{
+      id: string
+      userId: string
+      role: "ADMIN" | "NETWORK_LEADER" | "CELL_LEADER" | "MEMBER"
+      networkId: string | null
+      cellId: string | null
+      createdAt: Date
+    }>
   }
 
   interface User {
-    id: string
-    email: string
-    name: string
-    image?: string
+    id?: string
+    email?: string | null
+    name?: string | null
+    image?: string | null
   }
 }
 
 declare module "@auth/core/jwt" {
   interface JWT {
-    id: string
+    id?: string
     roles?: Array<{
       id: string
       userId: string

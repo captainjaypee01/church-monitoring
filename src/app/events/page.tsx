@@ -20,7 +20,7 @@ export default async function EventsPage() {
   const [userProfile] = await db
     .select()
     .from(profiles)
-    .where(eq(profiles.userId, session.user.id))
+    .where(eq(profiles.userId, session.user.id!))
     .limit(1)
 
   // Fetch upcoming events

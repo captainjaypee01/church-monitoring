@@ -37,7 +37,7 @@ export async function createEventAction(formData: FormData) {
   try {
     const session = await auth()
     
-    if (!session?.user || !canManageEvents(session.user)) {
+    if (!session?.user || !canManageEvents(session)) {
       return { success: false, error: "Unauthorized" }
     }
 
@@ -77,7 +77,7 @@ export async function createEventAction(formData: FormData) {
         capacity: data.capacity || null,
         allowRegistration: data.allowRegistration,
         attachmentUrl,
-        createdBy: session.user.id,
+        createdBy: session.user.id!,
       } satisfies NewEvent)
       .returning()
 
