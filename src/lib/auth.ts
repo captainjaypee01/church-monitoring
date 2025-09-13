@@ -1,5 +1,5 @@
 import NextAuth from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
+import Credentials from "next-auth/providers/credentials"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/lib/db"
 import { users, userRoles } from "@/lib/db/schema"
@@ -15,7 +15,7 @@ const credentialsSchema = z.object({
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db),
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -61,19 +61,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id
       }
-      return token
-    },
-    async session({ session, token }) {
+      
+      // Always fetch fresh roles data in JWT callback
       if (token.id) {
-        session.user.id = token.id as string
-        
-        // Fetch user roles
         const roles = await db
           .select()
           .from(userRoles)
           .where(eq(userRoles.userId, token.id as string))
 
-        session.user.roles = roles
+        token.roles = roles
+      }
+      
+      return token
+    },
+    async session({ session, token }) {
+      if (token.id) {
+        session.user.id = token.id as string
+        session.user.roles = token.roles as any || []
       }
       return session
     },
@@ -109,8 +113,16 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
+declare module "@auth/core/jwt" {
   interface JWT {
     id: string
+    roles?: Array<{
+      id: string
+      userId: string
+      role: "ADMIN" | "NETWORK_LEADER" | "CELL_LEADER" | "MEMBER"
+      networkId: string | null
+      cellId: string | null
+      createdAt: Date
+    }>
   }
 }
