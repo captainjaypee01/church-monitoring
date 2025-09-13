@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "src/app/api/auth/**": {
+      "runtime": "nodejs20.x"
+    },
+    "src/app/api/upload/**": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 9 * * 1"
+    }
+  ]
+}
