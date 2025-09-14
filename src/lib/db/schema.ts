@@ -12,6 +12,7 @@ import {
   jsonb,
   date,
   pgEnum,
+  unique,
 } from "drizzle-orm/pg-core"
 
 // Enums
@@ -37,7 +38,8 @@ export const actionEnum = pgEnum("action", [
 // Users table
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
+  email: varchar("email", { length: 255 }),
+  username: varchar("username", { length: 255 }),
   hashedPassword: varchar("hashed_password", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 50 }),
@@ -45,13 +47,18 @@ export const users = pgTable("users", {
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+}, (table) => ({
+  emailUnique: unique().on(table.email),
+  usernameUnique: unique().on(table.username),
+}))
 
 // Profiles table (member profile)
 export const profiles = pgTable("profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-  fullName: varchar("full_name", { length: 255 }).notNull(),
+  firstName: varchar("first_name", { length: 255 }),
+  lastName: varchar("last_name", { length: 255 }),
+  fullName: varchar("full_name", { length: 255 }).notNull(), // Keep for backward compatibility
   birthdate: date("birthdate"),
   gender: genderEnum("gender"),
   address: text("address"),

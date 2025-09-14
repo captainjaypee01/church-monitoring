@@ -53,16 +53,27 @@ export function NewUserForm() {
         <form action={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 placeholder="user@example.com"
-                required
               />
             </div>
             
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="username"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="password">Password *</Label>
               <Input
@@ -73,9 +84,7 @@ export function NewUserForm() {
                 required
               />
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
+            
             <div className="space-y-2">
               <Label htmlFor="name">Display Name *</Label>
               <Input
@@ -85,13 +94,25 @@ export function NewUserForm() {
                 required
               />
             </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name *</Label>
+              <Input
+                id="firstName"
+                name="firstName"
+                placeholder="e.g., John"
+                required
+              />
+            </div>
             
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name *</Label>
+              <Label htmlFor="lastName">Last Name *</Label>
               <Input
-                id="fullName"
-                name="fullName"
-                placeholder="e.g., John Smith"
+                id="lastName"
+                name="lastName"
+                placeholder="e.g., Smith"
                 required
               />
             </div>

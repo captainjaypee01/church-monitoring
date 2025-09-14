@@ -3,12 +3,12 @@ import Credentials from "next-auth/providers/credentials"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/lib/db"
 import { users, userRoles } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, or } from "drizzle-orm"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  emailOrUsername: z.string().min(1),
   password: z.string().min(1),
 })
 
@@ -18,17 +18,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        emailOrUsername: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         try {
-          const { email, password } = credentialsSchema.parse(credentials)
+          const { emailOrUsername, password } = credentialsSchema.parse(credentials)
 
           const user = await db
             .select()
             .from(users)
-            .where(eq(users.email, email.toLowerCase()))
+            .where(
+              or(
+                eq(users.email, emailOrUsername.toLowerCase()),
+                eq(users.username, emailOrUsername.toLowerCase())
+              )
+            )
             .limit(1)
 
           if (!user[0]) {

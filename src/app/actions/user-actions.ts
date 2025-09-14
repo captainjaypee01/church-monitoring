@@ -10,16 +10,24 @@ import { eq, and, isNull, or } from "drizzle-orm"
 import bcrypt from "bcryptjs"
 
 const userDataSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  name: z.string().min(1, "Name is required"),
-  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Invalid email address").optional(),
+  username: z.string().min(1, "Username is required").optional(),
+  name: z.string().min(1, "Display name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().optional(),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
   birthdate: z.string().optional(),
   address: z.string().optional(),
   isActive: z.boolean().default(true),
-})
+}).refine(
+  (data) => data.email || data.username,
+  {
+    message: "Either email or username is required",
+    path: ["emailOrUsername"],
+  }
+)
 
 const userUpdateSchema = userDataSchema.partial().omit({ password: true }).extend({
   password: z.string().optional(),
@@ -35,9 +43,11 @@ export async function createUserAction(formData: FormData) {
 
     // Parse form data
     const data = {
-      email: formData.get("email") as string,
+      email: formData.get("email") as string || undefined,
+      username: formData.get("username") as string || undefined,
       name: formData.get("name") as string,
-      fullName: formData.get("fullName") as string,
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
       password: formData.get("password") as string,
       phone: formData.get("phone") as string,
       gender: formData.get("gender") as string,
@@ -49,18 +59,33 @@ export async function createUserAction(formData: FormData) {
     // Validate data
     const validatedData = userDataSchema.parse(data)
 
-    // Check if email already exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(and(
-        eq(users.email, validatedData.email),
-        isNull(users.deletedAt)
-      ))
-      .limit(1)
+    // Check if email or username already exists
+    const existingUserConditions = []
+    if (validatedData.email) {
+      existingUserConditions.push(eq(users.email, validatedData.email))
+    }
+    if (validatedData.username) {
+      existingUserConditions.push(eq(users.username, validatedData.username))
+    }
+    
+    if (existingUserConditions.length > 0) {
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(and(
+          or(...existingUserConditions),
+          isNull(users.deletedAt)
+        ))
+        .limit(1)
 
-    if (existingUser) {
-      return { success: false, error: "Email already exists" }
+      if (existingUser) {
+        if (existingUser.email === validatedData.email) {
+          return { success: false, error: "Email already exists" }
+        }
+        if (existingUser.username === validatedData.username) {
+          return { success: false, error: "Username already exists" }
+        }
+      }
     }
 
     // Hash password
@@ -70,7 +95,8 @@ export async function createUserAction(formData: FormData) {
     const [newUser] = await db
       .insert(users)
       .values({
-        email: validatedData.email,
+        email: validatedData.email || null,
+        username: validatedData.username || null,
         name: validatedData.name,
         hashedPassword,
         phone: validatedData.phone || null,
@@ -82,7 +108,9 @@ export async function createUserAction(formData: FormData) {
       .insert(profiles)
       .values({
         userId: newUser.id,
-        fullName: validatedData.fullName,
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        fullName: `${validatedData.firstName} ${validatedData.lastName}`,
         gender: validatedData.gender || null,
         birthdate: validatedData.birthdate ? new Date(validatedData.birthdate) : null,
         address: validatedData.address || null,
@@ -109,9 +137,11 @@ export async function updateUserAction(userId: string, formData: FormData) {
     }
 
     const data = {
-      email: formData.get("email") as string,
+      email: formData.get("email") as string || undefined,
+      username: formData.get("username") as string || undefined,
       name: formData.get("name") as string,
-      fullName: formData.get("fullName") as string,
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
       password: formData.get("password") as string,
       phone: formData.get("phone") as string,
       gender: formData.get("gender") as string,
@@ -123,19 +153,32 @@ export async function updateUserAction(userId: string, formData: FormData) {
     // Validate data
     const validatedData = userUpdateSchema.parse(data)
 
-    // Check if email already exists (excluding current user)
+    // Check if email or username already exists (excluding current user)
+    const existingUserConditions = []
     if (validatedData.email) {
+      existingUserConditions.push(eq(users.email, validatedData.email))
+    }
+    if (validatedData.username) {
+      existingUserConditions.push(eq(users.username, validatedData.username))
+    }
+    
+    if (existingUserConditions.length > 0) {
       const [existingUser] = await db
         .select()
         .from(users)
         .where(and(
-          eq(users.email, validatedData.email),
+          or(...existingUserConditions),
           isNull(users.deletedAt)
         ))
         .limit(1)
 
       if (existingUser && existingUser.id !== userId) {
-        return { success: false, error: "Email already exists" }
+        if (existingUser.email === validatedData.email) {
+          return { success: false, error: "Email already exists" }
+        }
+        if (existingUser.username === validatedData.username) {
+          return { success: false, error: "Username already exists" }
+        }
       }
     }
 
@@ -144,7 +187,8 @@ export async function updateUserAction(userId: string, formData: FormData) {
       updatedAt: new Date(),
     }
     
-    if (validatedData.email) userUpdateData.email = validatedData.email
+    if (validatedData.email !== undefined) userUpdateData.email = validatedData.email || null
+    if (validatedData.username !== undefined) userUpdateData.username = validatedData.username || null
     if (validatedData.name) userUpdateData.name = validatedData.name
     if (validatedData.phone !== undefined) userUpdateData.phone = validatedData.phone || null
     if (validatedData.password) {
@@ -162,7 +206,11 @@ export async function updateUserAction(userId: string, formData: FormData) {
       updatedAt: new Date(),
     }
     
-    if (validatedData.fullName) profileUpdateData.fullName = validatedData.fullName
+    if (validatedData.firstName) profileUpdateData.firstName = validatedData.firstName
+    if (validatedData.lastName) profileUpdateData.lastName = validatedData.lastName
+    if (validatedData.firstName || validatedData.lastName) {
+      profileUpdateData.fullName = `${validatedData.firstName || ''} ${validatedData.lastName || ''}`.trim()
+    }
     if (validatedData.gender !== undefined) profileUpdateData.gender = validatedData.gender || null
     if (validatedData.birthdate !== undefined) {
       profileUpdateData.birthdate = validatedData.birthdate ? new Date(validatedData.birthdate) : null

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
+  const [emailOrUsername, setEmailOrUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -23,13 +23,13 @@ export default function LoginPage() {
 
     try {
       const result = await signIn("credentials", {
-        email,
+        emailOrUsername,
         password,
         redirect: false,
       })
 
       if (result?.error) {
-        setError("Invalid email or password")
+        setError("Invalid email/username or password")
       } else {
         router.push("/dashboard")
         router.refresh()
@@ -51,15 +51,15 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="emailOrUsername">Email or Username</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="emailOrUsername"
+                type="text"
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
                 required
                 className="mt-1"
-                placeholder="Enter your email"
+                placeholder="Enter your email or username"
               />
             </div>
             <div>
@@ -85,12 +85,12 @@ export default function LoginPage() {
           </form>
           
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">Demo Accounts (Email or Username):</p>
             <div className="text-xs text-gray-600 space-y-1">
-              <div>Admin: admin@church.com / admin123</div>
-              <div>Network Leader: network.leader@church.com / leader123</div>
-              <div>Cell Leader: cell.leader@church.com / cell123</div>
-              <div>Member: john@church.com / member123</div>
+              <div>Admin: admin@church.com or admin / admin123</div>
+              <div>Network Leader: network.leader@church.com or networkleader / leader123</div>
+              <div>Cell Leader: cell.leader@church.com or cellleader / cell123</div>
+              <div>Member: john@church.com or johnsmith / member123</div>
             </div>
           </div>
         </CardContent>

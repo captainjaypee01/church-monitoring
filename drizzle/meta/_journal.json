@@ -22,6 +22,20 @@
       "when": 1757833253123,
       "tag": "0002_organic_whirlwind",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1757834055258,
+      "tag": "0003_sour_photon",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1757834073157,
+      "tag": "0004_secret_madelyne_pryor",
+      "breakpoints": true
     }
   ]
 }

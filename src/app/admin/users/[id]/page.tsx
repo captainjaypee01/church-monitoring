@@ -33,12 +33,15 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     .select({
       id: users.id,
       email: users.email,
+      username: users.username,
       name: users.name,
       phone: users.phone,
       avatarUrl: users.avatarUrl,
       deletedAt: users.deletedAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
       fullName: profiles.fullName,
       birthdate: profiles.birthdate,
       gender: profiles.gender,
@@ -75,7 +78,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{userData.fullName || userData.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {userData.firstName && userData.lastName 
+              ? `${userData.firstName} ${userData.lastName}` 
+              : userData.fullName || userData.name}
+          </h1>
           <p className="text-muted-foreground">
             User management and profile details
           </p>
@@ -137,10 +144,18 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{userData.email}</span>
-              </div>
+              {userData.email && (
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{userData.email}</span>
+                </div>
+              )}
+              {userData.username && (
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">@{userData.username}</span>
+                </div>
+              )}
               {userData.phone && (
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />

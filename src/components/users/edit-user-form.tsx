@@ -66,17 +66,29 @@ export function EditUserForm({ user }: EditUserFormProps) {
         <form action={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 defaultValue={user.email}
                 placeholder="user@example.com"
-                required
               />
             </div>
             
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                defaultValue={user.username}
+                placeholder="username"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
               <Input
@@ -86,9 +98,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                 placeholder="Leave blank to keep current password"
               />
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
+            
             <div className="space-y-2">
               <Label htmlFor="name">Display Name *</Label>
               <Input
@@ -101,12 +111,23 @@ export function EditUserForm({ user }: EditUserFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name *</Label>
+              <Label htmlFor="firstName">First Name *</Label>
               <Input
-                id="fullName"
-                name="fullName"
-                defaultValue={user.fullName}
-                placeholder="e.g., John Smith"
+                id="firstName"
+                name="firstName"
+                defaultValue={user.firstName}
+                placeholder="e.g., John"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name *</Label>
+              <Input
+                id="lastName"
+                name="lastName"
+                defaultValue={user.lastName}
+                placeholder="e.g., Smith"
                 required
               />
             </div>

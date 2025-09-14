@@ -21,23 +21,42 @@ export default async function AdminUsersPage() {
     redirect("/dashboard")
   }
 
-  // Fetch all users with their profiles and roles (including soft deleted)
+  // Fetch all users with their profiles
   const usersData = await db
     .select({
       id: users.id,
       email: users.email,
+      username: users.username,
       name: users.name,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
       fullName: profiles.fullName,
       isActive: profiles.isActive,
       joinedAt: profiles.joinedAt,
       deletedAt: users.deletedAt,
-      roleCount: count(userRoles.id),
     })
     .from(users)
     .leftJoin(profiles, eq(users.id, profiles.userId))
-    .leftJoin(userRoles, eq(users.id, userRoles.userId))
-    .groupBy(users.id, profiles.fullName, profiles.isActive, profiles.joinedAt, users.deletedAt)
     .orderBy(users.email)
+
+  // Fetch roles for each user
+  const usersWithRoles = await Promise.all(
+    usersData.map(async (user) => {
+      const roles = await db
+        .select({
+          role: userRoles.role,
+          networkId: userRoles.networkId,
+          cellId: userRoles.cellId,
+        })
+        .from(userRoles)
+        .where(eq(userRoles.userId, user.id))
+
+      return {
+        ...user,
+        roles,
+      }
+    })
+  )
 
   return (
     <div className="space-y-6">
@@ -64,7 +83,7 @@ export default async function AdminUsersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{usersData.filter(user => !user.deletedAt).length}</div>
+            <div className="text-2xl font-bold">{usersWithRoles.filter(user => !user.deletedAt).length}</div>
             <p className="text-xs text-muted-foreground">
               Active users
             </p>
@@ -78,7 +97,7 @@ export default async function AdminUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {usersData.filter(user => user.isActive && !user.deletedAt).length}
+              {usersWithRoles.filter(user => user.isActive && !user.deletedAt).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Active profiles
@@ -93,7 +112,7 @@ export default async function AdminUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {usersData.filter(user => Number(user.roleCount) > 0 && !user.deletedAt).length}
+              {usersWithRoles.filter(user => user.roles.length > 0 && !user.deletedAt).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Users with assigned roles
@@ -108,7 +127,7 @@ export default async function AdminUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {usersData.filter(user => user.deletedAt).length}
+              {usersWithRoles.filter(user => user.deletedAt).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Soft deleted accounts
@@ -127,23 +146,35 @@ export default async function AdminUsersPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {usersData.map((user) => (
+            {usersWithRoles.map((user) => (
               <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                     <Users className="h-5 w-5 text-gray-500" />
                   </div>
                   <div>
-                    <p className="font-medium">{user.fullName || user.name || "No name"}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="font-medium">
+                      {user.firstName && user.lastName 
+                        ? `${user.firstName} ${user.lastName}` 
+                        : user.fullName || user.name || "No name"}
+                    </p>
+                    <div className="text-sm text-muted-foreground">
+                      {user.email && <span>{user.email}</span>}
+                      {user.email && user.username && <span className="mx-1">•</span>}
+                      {user.username && <span>@{user.username}</span>}
+                    </div>
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge variant={user.deletedAt ? "destructive" : user.isActive ? "default" : "secondary"}>
                         {user.deletedAt ? "Deleted" : user.isActive ? "Active" : "Inactive"}
                       </Badge>
-                      {Number(user.roleCount) > 0 && !user.deletedAt && (
-                        <Badge variant="outline">
-                          {user.roleCount} role{Number(user.roleCount) !== 1 ? 's' : ''}
-                        </Badge>
+                      {user.roles.length > 0 && !user.deletedAt && (
+                        <div className="flex space-x-1">
+                          {user.roles.map((role, index) => (
+                            <Badge key={index} variant="outline">
+                              {role.role}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>

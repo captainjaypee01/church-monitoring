@@ -23,24 +23,40 @@ import {
   type NewVolunteerRole,
   type NewService,
 } from "./schema"
+import { eq } from "drizzle-orm"
 import bcrypt from "bcryptjs"
 
 async function seed() {
   console.log("🌱 Starting database seed...")
 
   // Create admin user
-  const adminPassword = await bcrypt.hash("admin123", 10)
-  const [adminUser] = await db
-    .insert(users)
-    .values({
-      email: "admin@church.com",
-      hashedPassword: adminPassword,
-      name: "System Administrator",
-      phone: "+1234567890",
-    } satisfies NewUser)
-    .returning()
-
-  console.log("✅ Created admin user")
+  let adminUser
+  try {
+    const adminPassword = await bcrypt.hash("admin123", 10)
+    const [newAdminUser] = await db
+      .insert(users)
+      .values({
+        email: "admin@church.com",
+        username: "admin",
+        hashedPassword: adminPassword,
+        name: "System Administrator",
+        phone: "+1234567890",
+      } satisfies NewUser)
+      .returning()
+    adminUser = newAdminUser
+    console.log("✅ Created admin user")
+  } catch (error) {
+    // Admin user already exists, fetch it
+    const existingAdmin = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.email, "admin@church.com"),
+    })
+    if (existingAdmin) {
+      adminUser = existingAdmin
+      console.log("ℹ️ Admin user already exists")
+    } else {
+      throw error
+    }
+  }
 
   // Create admin profile
   const [adminProfile] = await db
@@ -91,6 +107,7 @@ async function seed() {
     .insert(users)
     .values({
       email: "network.leader@church.com",
+      username: "networkleader",
       hashedPassword: networkLeaderPassword,
       name: "Network Leader",
       phone: "+1234567891",
@@ -120,6 +137,7 @@ async function seed() {
     .insert(users)
     .values({
       email: "cell.leader@church.com",
+      username: "cellleader",
       hashedPassword: cellLeaderPassword,
       name: "Cell Leader",
       phone: "+1234567892",
@@ -153,10 +171,10 @@ async function seed() {
   const memberPassword = await bcrypt.hash("member123", 10)
   
   const memberData = [
-    { name: "John Smith", email: "john@church.com", gender: "MALE" as const },
-    { name: "Jane Doe", email: "jane@church.com", gender: "FEMALE" as const },
-    { name: "Bob Wilson", email: "bob@church.com", gender: "MALE" as const },
-    { name: "Alice Johnson", email: "alice@church.com", gender: "FEMALE" as const },
+    { name: "John Smith", email: "john@church.com", username: "johnsmith", gender: "MALE" as const },
+    { name: "Jane Doe", email: "jane@church.com", username: "janedoe", gender: "FEMALE" as const },
+    { name: "Bob Wilson", email: "bob@church.com", username: "bobwilson", gender: "MALE" as const },
+    { name: "Alice Johnson", email: "alice@church.com", username: "alicejohnson", gender: "FEMALE" as const },
   ]
 
   for (const member of memberData) {
@@ -164,6 +182,7 @@ async function seed() {
       .insert(users)
       .values({
         email: member.email,
+        username: member.username,
         hashedPassword: memberPassword,
         name: member.name,
         phone: `+123456789${Math.floor(Math.random() * 10)}`,
@@ -206,8 +225,12 @@ async function seed() {
     { code: "SOL", title: "School of Leadership", order: 7 },
   ]
 
-  await db.insert(trainingLevels).values(trainingLevelsData)
-  console.log("✅ Created training levels")
+  try {
+    await db.insert(trainingLevels).values(trainingLevelsData)
+    console.log("✅ Created training levels")
+  } catch (error) {
+    console.log("ℹ️ Training levels already exist, skipping...")
+  }
 
   // Create demo events
   const futureDate = new Date()
