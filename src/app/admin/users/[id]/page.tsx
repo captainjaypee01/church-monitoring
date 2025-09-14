@@ -75,7 +75,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const isCurrentUser = session.user.id === id
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
