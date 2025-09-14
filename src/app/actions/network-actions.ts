@@ -58,19 +58,34 @@ export async function createNetworkAction(formData: FormData) {
     if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
       console.log("Assigning network leader:", validatedData.networkLeader, "to network:", newNetwork.id)
       
-      // Remove any existing network leadership role for this user
-      await db.delete(userRoles).where(and(
-        eq(userRoles.userId, validatedData.networkLeader),
-        eq(userRoles.role, "NETWORK_LEADER")
-      ))
+      // Update existing NETWORK_LEADER role to assign to this network
+      const existingRole = await db
+        .select()
+        .from(userRoles)
+        .where(and(
+          eq(userRoles.userId, validatedData.networkLeader),
+          eq(userRoles.role, "NETWORK_LEADER")
+        ))
+        .limit(1)
 
-      // Create leadership role assignment
-      await db.insert(userRoles).values({
-        userId: validatedData.networkLeader,
-        role: "NETWORK_LEADER",
-        networkId: newNetwork.id,
-        cellId: null,
-      })
+      if (existingRole.length > 0) {
+        // Update existing role with network assignment
+        await db.update(userRoles)
+          .set({
+            networkId: newNetwork.id,
+            cellId: null,
+            updatedAt: new Date()
+          })
+          .where(eq(userRoles.id, existingRole[0].id))
+      } else {
+        // Create new role if user doesn't have NETWORK_LEADER capability
+        await db.insert(userRoles).values({
+          userId: validatedData.networkLeader,
+          role: "NETWORK_LEADER",
+          networkId: newNetwork.id,
+          cellId: null,
+        })
+      }
 
       // Also create/update membership record with leadership flag
       const [userProfile] = await db
@@ -165,13 +180,34 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
         .limit(1)
 
       if (existingLeadership.length === 0) {
-        // Add new network leader role
-        await db.insert(userRoles).values({
-          userId: validatedData.networkLeader,
-          role: "NETWORK_LEADER",
-          networkId: networkId,
-          cellId: null,
-        })
+        // Check if user has NETWORK_LEADER capability role
+        const existingCapabilityRole = await db
+          .select()
+          .from(userRoles)
+          .where(and(
+            eq(userRoles.userId, validatedData.networkLeader),
+            eq(userRoles.role, "NETWORK_LEADER")
+          ))
+          .limit(1)
+
+        if (existingCapabilityRole.length > 0) {
+          // Update existing capability role with network assignment
+          await db.update(userRoles)
+            .set({
+              networkId: networkId,
+              cellId: null,
+              updatedAt: new Date()
+            })
+            .where(eq(userRoles.id, existingCapabilityRole[0].id))
+        } else {
+          // Create new role if user doesn't have NETWORK_LEADER capability
+          await db.insert(userRoles).values({
+            userId: validatedData.networkLeader,
+            role: "NETWORK_LEADER",
+            networkId: networkId,
+            cellId: null,
+          })
+        }
 
         // Also create/update membership record with leadership flag
         const [userProfile] = await db

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createCellAction } from "@/app/actions/cell-actions"
+import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 interface NewCellFormProps {
@@ -18,8 +19,6 @@ interface NewCellFormProps {
 
 export function NewCellForm({ networkId, currentUserId }: NewCellFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
   const [cellLeaders, setCellLeaders] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
@@ -44,21 +43,19 @@ export function NewCellForm({ networkId, currentUserId }: NewCellFormProps) {
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
-    setError("")
-    setMessage("")
 
     try {
       const result = await createCellAction(formData)
       
       if (result.success) {
-        setMessage("Cell group created successfully!")
+        toast.success("Cell group created successfully!")
         router.push(`/admin/networks/${networkId}`)
         router.refresh()
       } else {
-        setError(result.error || "Failed to create cell group")
+        toast.error(result.error || "Failed to create cell group")
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      toast.error("An unexpected error occurred")
       console.error("Cell creation error:", err)
     } finally {
       setIsLoading(false)
@@ -118,17 +115,6 @@ export function NewCellForm({ networkId, currentUserId }: NewCellFormProps) {
             />
           </div>
 
-          {message && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-              {message}
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-              {error}
-            </div>
-          )}
 
           <div className="flex justify-end space-x-2">
             <Button

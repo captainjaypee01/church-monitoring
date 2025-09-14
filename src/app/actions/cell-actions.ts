@@ -64,21 +64,34 @@ export async function createCellAction(formData: FormData) {
     if (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") {
       console.log("Assigning cell leader:", validatedData.cellLeader, "to cell:", newCell.id)
       
-      // Remove any existing cell leader role for this user
-      await db
-        .delete(userRoles)
+      // Check if user has CELL_LEADER capability role
+      const existingCapabilityRole = await db
+        .select()
+        .from(userRoles)
         .where(and(
           eq(userRoles.userId, validatedData.cellLeader),
           eq(userRoles.role, "CELL_LEADER")
         ))
+        .limit(1)
 
-      // Add new cell leader role
-      await db.insert(userRoles).values({
-        userId: validatedData.cellLeader,
-        role: "CELL_LEADER",
-        networkId: validatedData.networkId,
-        cellId: newCell.id,
-      })
+      if (existingCapabilityRole.length > 0) {
+        // Update existing capability role with cell assignment
+        await db.update(userRoles)
+          .set({
+            networkId: validatedData.networkId,
+            cellId: newCell.id,
+            updatedAt: new Date()
+          })
+          .where(eq(userRoles.id, existingCapabilityRole[0].id))
+      } else {
+        // Create new role if user doesn't have CELL_LEADER capability
+        await db.insert(userRoles).values({
+          userId: validatedData.cellLeader,
+          role: "CELL_LEADER",
+          networkId: validatedData.networkId,
+          cellId: newCell.id,
+        })
+      }
       console.log("Cell leader assigned successfully")
     } else {
       console.log("No cell leader assigned (value:", validatedData.cellLeader, ")")
@@ -150,13 +163,34 @@ export async function updateCellAction(cellId: string, formData: FormData) {
         .limit(1)
 
       if (existingLeadership.length === 0) {
-        // Add new cell leader role
-        await db.insert(userRoles).values({
-          userId: validatedData.cellLeader,
-          role: "CELL_LEADER",
-          networkId: validatedData.networkId,
-          cellId: cellId,
-        })
+        // Check if user has CELL_LEADER capability role
+        const existingCapabilityRole = await db
+          .select()
+          .from(userRoles)
+          .where(and(
+            eq(userRoles.userId, validatedData.cellLeader),
+            eq(userRoles.role, "CELL_LEADER")
+          ))
+          .limit(1)
+
+        if (existingCapabilityRole.length > 0) {
+          // Update existing capability role with cell assignment
+          await db.update(userRoles)
+            .set({
+              networkId: validatedData.networkId,
+              cellId: cellId,
+              updatedAt: new Date()
+            })
+            .where(eq(userRoles.id, existingCapabilityRole[0].id))
+        } else {
+          // Create new role if user doesn't have CELL_LEADER capability
+          await db.insert(userRoles).values({
+            userId: validatedData.cellLeader,
+            role: "CELL_LEADER",
+            networkId: validatedData.networkId,
+            cellId: cellId,
+          })
+        }
 
         // Also create/update membership record with leadership flag
         const [userProfile] = await db
