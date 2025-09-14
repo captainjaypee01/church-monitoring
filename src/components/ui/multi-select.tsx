@@ -57,7 +57,8 @@ export function MultiSelect({
   const selectedOptions = options.filter((option) => selected.includes(option.value))
 
   return (
-    <div className="relative">
+    <div className="space-y-3">
+      <div className="relative">
       <Button
         type="button"
         variant="outline"
@@ -65,30 +66,11 @@ export function MultiSelect({
         disabled={disabled}
         onClick={() => setOpen(!open)}
       >
-        <div className="flex flex-wrap gap-1 max-w-full">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {selectedOptions.length > 0 ? (
-            selectedOptions.length <= 3 ? (
-              selectedOptions.map((option) => (
-                <Badge
-                  key={option.value}
-                  variant="secondary"
-                  className="text-xs flex items-center gap-1"
-                >
-                  <span>{option.label}</span>
-                  <X 
-                    className="h-3 w-3 cursor-pointer hover:bg-gray-200 rounded" 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRemove(option.value)
-                    }}
-                  />
-                </Badge>
-              ))
-            ) : (
-              <Badge variant="secondary" className="text-xs">
-                {selectedOptions.length} selected
-              </Badge>
-            )
+            <span className="text-sm font-medium">
+              {selectedOptions.length} leader{selectedOptions.length > 1 ? 's' : ''} selected
+            </span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
@@ -144,6 +126,42 @@ export function MultiSelect({
           className="fixed inset-0 z-40"
           onClick={() => setOpen(false)}
         />
+      )}
+      </div>
+      
+      {/* Selected Leaders Display */}
+      {selectedOptions.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <span>Selected Leaders:</span>
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              {selectedOptions.length}
+            </span>
+          </div>
+          <div className="grid gap-2 max-h-32 overflow-y-auto">
+            {selectedOptions.map((option) => (
+              <div
+                key={option.value}
+                className="flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm transition-colors"
+              >
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="font-medium text-gray-900 truncate">{option.label}</span>
+                  {option.email && (
+                    <span className="text-xs text-gray-500 truncate">{option.email}</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(option.value)}
+                  className="ml-3 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                  title="Remove leader"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
