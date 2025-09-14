@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,7 +27,27 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const [networkLeaders, setNetworkLeaders] = useState<any[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
+
+  useEffect(() => {
+    const fetchNetworkLeaders = async () => {
+      try {
+        const response = await fetch('/api/users/network-leaders')
+        if (response.ok) {
+          const data = await response.json()
+          setNetworkLeaders(data.users || [])
+        }
+      } catch (error) {
+        console.error('Error fetching network leaders:', error)
+      } finally {
+        setLoadingUsers(false)
+      }
+    }
+
+    fetchNetworkLeaders()
+  }, [])
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
@@ -67,20 +87,19 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
         
         <div className="space-y-2">
           <Label htmlFor="networkLeader">Network Leader</Label>
-          <Select name="networkLeader" defaultValue={networkLeader?.id || "none"}>
+          <Select name="networkLeader" defaultValue={networkLeader?.id || "none"} disabled={loadingUsers}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a network leader" />
+              <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a network leader"} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No leader assigned</SelectItem>
-              {networkLeader && (
-                <SelectItem value={networkLeader.id}>
-                  {networkLeader.fullName} (Current)
+              {networkLeaders.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.fullName || user.name} ({user.email})
+                  {user.id === networkLeader?.id ? " (Current)" : ""}
+                  {user.currentRole && user.networkId && user.id !== networkLeader?.id ? " (Assigned elsewhere)" : ""}
                 </SelectItem>
-              )}
-              {/* TODO: Fetch and populate with actual users */}
-              <SelectItem value="user1">John Smith</SelectItem>
-              <SelectItem value="user2">Jane Doe</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

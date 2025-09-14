@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +20,27 @@ export function NewCellForm({ networkId, currentUserId }: NewCellFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const [cellLeaders, setCellLeaders] = useState<any[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
+
+  useEffect(() => {
+    const fetchCellLeaders = async () => {
+      try {
+        const response = await fetch('/api/users/cell-leaders')
+        if (response.ok) {
+          const data = await response.json()
+          setCellLeaders(data.users || [])
+        }
+      } catch (error) {
+        console.error('Error fetching cell leaders:', error)
+      } finally {
+        setLoadingUsers(false)
+      }
+    }
+
+    fetchCellLeaders()
+  }, [])
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
@@ -71,16 +91,18 @@ export function NewCellForm({ networkId, currentUserId }: NewCellFormProps) {
             
             <div className="space-y-2">
               <Label htmlFor="cellLeader">Cell Leader</Label>
-              <Select name="cellLeader">
+              <Select name="cellLeader" disabled={loadingUsers}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a cell leader" />
+                  <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a cell leader"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Assign later</SelectItem>
-                  {/* TODO: Fetch and populate with actual users */}
-                  <SelectItem value="user1">John Smith</SelectItem>
-                  <SelectItem value="user2">Jane Doe</SelectItem>
-                  <SelectItem value="user3">Mike Johnson</SelectItem>
+                  {cellLeaders.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.fullName || user.name} ({user.email})
+                      {user.currentRole && user.cellId ? " (Currently assigned)" : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -13,7 +13,12 @@ const networkDataSchema = z.object({
   description: z.string().optional(),
   location: z.string().optional(),
   createdBy: z.string().min(1, "Creator ID is required"),
-  networkLeader: z.string().optional(),
+  networkLeader: z.string().optional().refine((val) => {
+    if (!val || val === "none" || val === "") return true
+    // Check if it's a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    return uuidRegex.test(val)
+  }, "Invalid user ID format"),
 })
 
 export async function createNetworkAction(formData: FormData) {
@@ -48,7 +53,7 @@ export async function createNetworkAction(formData: FormData) {
       .returning()
 
     // Assign network leader if specified
-    if (validatedData.networkLeader && validatedData.networkLeader !== "none") {
+    if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
       await db.insert(userRoles).values({
         userId: validatedData.networkLeader,
         role: "NETWORK_LEADER",
@@ -100,7 +105,7 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
       .where(eq(networks.id, networkId))
 
     // Handle network leader assignment
-    if (validatedData.networkLeader && validatedData.networkLeader !== "none") {
+    if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
       // Remove existing network leader role for this network
       await db
         .delete(userRoles)
@@ -116,6 +121,14 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
         networkId: networkId,
         cellId: null,
       })
+    } else if (validatedData.networkLeader === "none" || validatedData.networkLeader === "") {
+      // Remove existing network leader role for this network if "none" is selected
+      await db
+        .delete(userRoles)
+        .where(and(
+          eq(userRoles.role, "NETWORK_LEADER"),
+          eq(userRoles.networkId, networkId)
+        ))
     }
 
     revalidatePath("/admin/networks")

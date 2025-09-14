@@ -13,7 +13,12 @@ const cellDataSchema = z.object({
   description: z.string().optional(),
   networkId: z.string().min(1, "Network ID is required"),
   createdBy: z.string().min(1, "Creator ID is required"),
-  cellLeader: z.string().optional(),
+  cellLeader: z.string().optional().refine((val) => {
+    if (!val || val === "none" || val === "") return true
+    // Check if it's a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    return uuidRegex.test(val)
+  }, "Invalid user ID format"),
 })
 
 export async function createCellAction(formData: FormData) {
@@ -43,13 +48,13 @@ export async function createCellAction(formData: FormData) {
         name: validatedData.name,
         description: validatedData.description || null,
         networkId: validatedData.networkId,
-        leaderId: validatedData.cellLeader !== "none" ? validatedData.cellLeader : null,
+        leaderId: (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") ? validatedData.cellLeader : null,
         createdBy: validatedData.createdBy,
       })
       .returning()
 
     // Assign cell leader if specified
-    if (validatedData.cellLeader && validatedData.cellLeader !== "none") {
+    if (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") {
       await db.insert(userRoles).values({
         userId: validatedData.cellLeader,
         role: "CELL_LEADER",
@@ -96,13 +101,13 @@ export async function updateCellAction(cellId: string, formData: FormData) {
       .set({
         name: validatedData.name,
         description: validatedData.description || null,
-        leaderId: validatedData.cellLeader !== "none" ? validatedData.cellLeader : null,
+        leaderId: (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") ? validatedData.cellLeader : null,
         updatedAt: new Date(),
       })
       .where(eq(cells.id, cellId))
 
     // Handle cell leader assignment
-    if (validatedData.cellLeader && validatedData.cellLeader !== "none") {
+    if (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") {
       // Remove existing cell leader role for this cell
       await db
         .delete(userRoles)
@@ -127,6 +132,14 @@ export async function updateCellAction(cellId: string, formData: FormData) {
           cellId: cellId,
         })
       }
+    } else if (validatedData.cellLeader === "none" || validatedData.cellLeader === "") {
+      // Remove existing cell leader role for this cell if "none" is selected
+      await db
+        .delete(userRoles)
+        .where(and(
+          eq(userRoles.role, "CELL_LEADER"),
+          eq(userRoles.cellId, cellId)
+        ))
     }
 
     revalidatePath(`/admin/networks`)
