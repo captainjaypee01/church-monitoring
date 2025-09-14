@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,39 @@ export function NewUserForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const [networks, setNetworks] = useState<any[]>([])
+  const [cells, setCells] = useState<any[]>([])
+  const [loadingNetworks, setLoadingNetworks] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    // Fetch networks and cells for role assignment
+    const fetchData = async () => {
+      setLoadingNetworks(true)
+      try {
+        const [networksRes, cellsRes] = await Promise.all([
+          fetch('/api/networks'),
+          fetch('/api/cells')
+        ])
+        
+        if (networksRes.ok) {
+          const networksData = await networksRes.json()
+          setNetworks(networksData)
+        }
+        
+        if (cellsRes.ok) {
+          const cellsData = await cellsRes.json()
+          setCells(cellsData)
+        }
+      } catch (error) {
+        console.error('Error fetching networks/cells:', error)
+      } finally {
+        setLoadingNetworks(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
@@ -166,6 +198,59 @@ export function NewUserForm() {
           <div className="flex items-center space-x-2">
             <Switch id="isActive" name="isActive" defaultChecked />
             <Label htmlFor="isActive">Active User</Label>
+          </div>
+
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-lg font-medium">Role Assignment</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select name="role">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MEMBER">Member</SelectItem>
+                  <SelectItem value="CELL_LEADER">Cell Leader</SelectItem>
+                  <SelectItem value="NETWORK_LEADER">Network Leader</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="networkId">Network (for Network Leader)</Label>
+                <Select name="networkId" disabled={loadingNetworks}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select network" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {networks.map((network) => (
+                      <SelectItem key={network.id} value={network.id}>
+                        {network.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cellId">Cell (for Cell Leader)</Label>
+                <Select name="cellId" disabled={loadingNetworks}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select cell" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cells.map((cell) => (
+                      <SelectItem key={cell.id} value={cell.id}>
+                        {cell.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           {message && (

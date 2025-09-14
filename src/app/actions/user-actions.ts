@@ -21,6 +21,9 @@ const baseUserSchema = z.object({
   birthdate: z.string().optional(),
   address: z.string().optional(),
   isActive: z.boolean().default(true),
+  role: z.enum(["ADMIN", "NETWORK_LEADER", "CELL_LEADER", "MEMBER"]).optional(),
+  networkId: z.string().optional(),
+  cellId: z.string().optional(),
 })
 
 const userDataSchema = baseUserSchema.refine(
@@ -56,6 +59,9 @@ export async function createUserAction(formData: FormData) {
       birthdate: formData.get("birthdate") as string,
       address: formData.get("address") as string,
       isActive: formData.get("isActive") === "true",
+      role: formData.get("role") as string || undefined,
+      networkId: formData.get("networkId") as string || undefined,
+      cellId: formData.get("cellId") as string || undefined,
     }
 
     // Validate data
@@ -119,6 +125,16 @@ export async function createUserAction(formData: FormData) {
         isActive: validatedData.isActive,
       })
 
+    // Assign role if provided
+    if (validatedData.role) {
+      await db.insert(userRoles).values({
+        userId: newUser.id,
+        role: validatedData.role as any,
+        networkId: validatedData.networkId || null,
+        cellId: validatedData.cellId || null,
+      })
+    }
+
     revalidatePath("/admin/users")
     return { success: true, userId: newUser.id }
   } catch (error) {
@@ -150,6 +166,9 @@ export async function updateUserAction(userId: string, formData: FormData) {
       birthdate: formData.get("birthdate") as string,
       address: formData.get("address") as string,
       isActive: formData.get("isActive") === "true",
+      role: formData.get("role") as string || undefined,
+      networkId: formData.get("networkId") as string || undefined,
+      cellId: formData.get("cellId") as string || undefined,
     }
 
     // Validate data
@@ -224,6 +243,22 @@ export async function updateUserAction(userId: string, formData: FormData) {
       .update(profiles)
       .set(profileUpdateData)
       .where(eq(profiles.userId, userId))
+
+    // Handle role assignment/update
+    if (validatedData.role !== undefined) {
+      // Remove existing roles
+      await db.delete(userRoles).where(eq(userRoles.userId, userId))
+      
+      // Add new role if provided
+      if (validatedData.role) {
+        await db.insert(userRoles).values({
+          userId,
+          role: validatedData.role as any,
+          networkId: validatedData.networkId || null,
+          cellId: validatedData.cellId || null,
+        })
+      }
+    }
 
     revalidatePath("/admin/users")
     revalidatePath(`/admin/users/${userId}`)

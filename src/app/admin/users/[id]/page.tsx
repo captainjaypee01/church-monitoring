@@ -249,7 +249,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
       {/* Edit Form */}
       {!isDeleted && (
-        <EditUserForm user={userData} />
+        <EditUserForm user={{
+          ...userData,
+          roles: userRolesData.map(role => ({
+            role: role.role,
+            networkId: role.networkId,
+            cellId: role.cellId
+          }))
+        }} />
       )}
     </div>
   )
