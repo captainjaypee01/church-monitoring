@@ -89,16 +89,20 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           {!isCurrentUser && (
             <>
               {isDeleted ? (
-                <form action={restoreUserAction}>
-                  <input type="hidden" name="userId" value={id} />
+                <form action={async () => {
+                  "use server"
+                  await restoreUserAction(id)
+                }}>
                   <Button variant="outline" type="submit">
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Restore User
                   </Button>
                 </form>
               ) : (
-                <form action={softDeleteUserAction}>
-                  <input type="hidden" name="userId" value={id} />
+                <form action={async () => {
+                  "use server"
+                  await softDeleteUserAction(id)
+                }}>
                   <Button variant="destructive" type="submit">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete User

@@ -112,7 +112,7 @@ export function NewUserForm() {
               <Label htmlFor="gender">Gender</Label>
               <Select name="gender">
                 <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
+                  <SelectValue placeholder="Select gender (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="MALE">Male</SelectItem>

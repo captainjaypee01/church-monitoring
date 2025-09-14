@@ -126,12 +126,11 @@ export function EditUserForm({ user }: EditUserFormProps) {
             
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
-              <Select name="gender" defaultValue={user.gender || ""}>
+              <Select name="gender" defaultValue={user.gender || undefined}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No selection</SelectItem>
                   <SelectItem value="MALE">Male</SelectItem>
                   <SelectItem value="FEMALE">Female</SelectItem>
                   <SelectItem value="OTHER">Other</SelectItem>
