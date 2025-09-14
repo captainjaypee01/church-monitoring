@@ -51,12 +51,7 @@ export function NewUserForm() {
     fetchData()
   }, [])
 
-  // Handle role changes and clear network selection for non-Cell Leader roles
-  useEffect(() => {
-    if (selectedRole !== "CELL_LEADER" && selectedNetwork) {
-      setSelectedNetwork("")
-    }
-  }, [selectedRole, selectedNetwork])
+  // No role-based restrictions - users can be assigned to any network/cell regardless of role
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)

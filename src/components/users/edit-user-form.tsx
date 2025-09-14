@@ -73,22 +73,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
     fetchData()
   }, [])
 
-  // Handle role changes and network initialization
-  useEffect(() => {
-    const currentRole = user.roles[0]
-    
-    if (selectedRole === "CELL_LEADER") {
-      // If user has existing networkId for Cell Leader role, use it
-      if (currentRole && currentRole.networkId && !selectedNetwork) {
-        setSelectedNetwork(currentRole.networkId)
-      }
-    } else {
-      // Clear network selection for non-Cell Leader roles
-      if (selectedNetwork) {
-        setSelectedNetwork("")
-      }
-    }
-  }, [selectedRole, selectedNetwork, user.roles])
+  // No role-based restrictions - users can be assigned to any network/cell regardless of role
 
   // Get current user role
   const currentRole = user.roles.length > 0 ? user.roles[0] : null
