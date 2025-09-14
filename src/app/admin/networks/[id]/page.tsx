@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { EditNetworkForm } from "@/components/networks/edit-network-form"
 import { db } from "@/lib/db"
-import { networks, cells, cellMemberships, profiles, userRoles, users } from "@/lib/db/schema"
+import { networks, cells, cellMemberships, profiles, userRoles, users, memberships } from "@/lib/db/schema"
 import { eq, count, and } from "drizzle-orm"
 import { Building, Users, Settings, Trash2, Plus } from "lucide-react"
 import Link from "next/link"
@@ -63,20 +63,25 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
       name: cells.name,
       description: cells.description,
       leaderName: profiles.fullName,
-      memberCount: count(cellMemberships.id),
+      memberCount: count(memberships.id),
     })
     .from(cells)
     .leftJoin(profiles, eq(cells.leaderId, profiles.id))
-    .leftJoin(cellMemberships, eq(cells.id, cellMemberships.cellId))
+    .leftJoin(memberships, and(
+      eq(memberships.cellId, cells.id),
+      eq(memberships.status, "ACTIVE")
+    ))
     .where(eq(cells.networkId, id))
     .groupBy(cells.id, profiles.fullName)
 
   // Get total members in network
   const totalMembersResult = await db
     .select({ count: count() })
-    .from(cellMemberships)
-    .innerJoin(cells, eq(cellMemberships.cellId, cells.id))
-    .where(eq(cells.networkId, id))
+    .from(memberships)
+    .where(and(
+      eq(memberships.networkId, id),
+      eq(memberships.status, "ACTIVE")
+    ))
 
   const totalMembers = totalMembersResult[0] || { count: 0 }
 

@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { users, profiles, userRoles, cellMemberships } from "@/lib/db/schema"
+import { users, profiles, userRoles, cellMemberships, memberships } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -118,7 +118,7 @@ export async function createUserAction(formData: FormData) {
       .returning()
 
     // Create profile
-    await db
+    const [newProfile] = await db
       .insert(profiles)
       .values({
         userId: newUser.id,
@@ -130,17 +130,23 @@ export async function createUserAction(formData: FormData) {
         address: validatedData.address || null,
         isActive: validatedData.isActive,
       })
+      .returning()
 
-    // Assign role if provided
-    if (validatedData.role) {
-      await db.insert(userRoles).values({
-        userId: newUser.id,
-        role: validatedData.role as any,
+    // Handle membership and leadership assignment
+    if (validatedData.networkId || validatedData.cellId) {
+      // Create membership record
+      await db.insert(memberships).values({
+        profileId: newProfile.id,
         networkId: validatedData.networkId || null,
         cellId: validatedData.cellId || null,
+        membershipType: validatedData.role && ["NETWORK_LEADER", "CELL_LEADER"].includes(validatedData.role) ? "LEADER" : "MEMBER",
+        leadershipScope: validatedData.role === "NETWORK_LEADER" ? "NETWORK" : 
+                        validatedData.role === "CELL_LEADER" ? "CELL" : "NONE",
+        status: "ACTIVE",
+        joinedAt: new Date(),
       })
 
-      // Create cell membership if user is assigned to a cell
+      // Also create legacy cellMemberships record for backward compatibility
       if (validatedData.cellId) {
         await db.insert(cellMemberships).values({
           cellId: validatedData.cellId,
@@ -148,6 +154,16 @@ export async function createUserAction(formData: FormData) {
           roleInCell: validatedData.role === "CELL_LEADER" ? "LEADER" : "MEMBER",
         })
       }
+    }
+
+    // Create leadership role if specified
+    if (validatedData.role && validatedData.role !== "MEMBER") {
+      await db.insert(userRoles).values({
+        userId: newUser.id,
+        role: validatedData.role as any,
+        networkId: validatedData.networkId || null,
+        cellId: validatedData.cellId || null,
+      })
     }
 
     revalidatePath("/admin/users")
@@ -280,38 +296,51 @@ export async function updateUserAction(userId: string, formData: FormData) {
       .set(profileUpdateData)
       .where(eq(profiles.userId, userId))
 
-    // Handle role assignment/update
-    if (validatedData.role !== undefined) {
-      // Get user's profile for cell membership updates
+    // Handle membership and role assignment/update
+    if (validatedData.role !== undefined || validatedData.networkId !== undefined || validatedData.cellId !== undefined) {
+      // Get user's profile for membership updates
       const [userProfile] = await db
         .select({ id: profiles.id })
         .from(profiles)
         .where(eq(profiles.userId, userId))
         .limit(1)
 
-      // Remove existing roles
-      await db.delete(userRoles).where(eq(userRoles.userId, userId))
-      
-      // Remove existing cell memberships
       if (userProfile) {
+        // Remove existing memberships and roles
+        await db.delete(memberships).where(eq(memberships.profileId, userProfile.id))
         await db.delete(cellMemberships).where(eq(cellMemberships.profileId, userProfile.id))
-      }
-      
-      // Add new role if provided
-      if (validatedData.role) {
-        await db.insert(userRoles).values({
-          userId,
-          role: validatedData.role as any,
-          networkId: validatedData.networkId || null,
-          cellId: validatedData.cellId || null,
-        })
-
-        // Create cell membership if user is assigned to a cell
-        if (validatedData.cellId && userProfile) {
-          await db.insert(cellMemberships).values({
-            cellId: validatedData.cellId,
+        await db.delete(userRoles).where(eq(userRoles.userId, userId))
+        
+        // Create new membership if user is assigned to network/cell
+        if (validatedData.networkId || validatedData.cellId) {
+          await db.insert(memberships).values({
             profileId: userProfile.id,
-            roleInCell: validatedData.role === "CELL_LEADER" ? "LEADER" : "MEMBER",
+            networkId: validatedData.networkId || null,
+            cellId: validatedData.cellId || null,
+            membershipType: validatedData.role && ["NETWORK_LEADER", "CELL_LEADER"].includes(validatedData.role) ? "LEADER" : "MEMBER",
+            leadershipScope: validatedData.role === "NETWORK_LEADER" ? "NETWORK" : 
+                            validatedData.role === "CELL_LEADER" ? "CELL" : "NONE",
+            status: "ACTIVE",
+            joinedAt: new Date(),
+          })
+
+          // Create legacy cellMemberships record for backward compatibility
+          if (validatedData.cellId) {
+            await db.insert(cellMemberships).values({
+              cellId: validatedData.cellId,
+              profileId: userProfile.id,
+              roleInCell: validatedData.role === "CELL_LEADER" ? "LEADER" : "MEMBER",
+            })
+          }
+        }
+
+        // Create leadership role if specified
+        if (validatedData.role && validatedData.role !== "MEMBER") {
+          await db.insert(userRoles).values({
+            userId,
+            role: validatedData.role as any,
+            networkId: validatedData.networkId || null,
+            cellId: validatedData.cellId || null,
           })
         }
       }

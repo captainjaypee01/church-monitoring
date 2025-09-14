@@ -19,6 +19,9 @@ import {
 export const roleEnum = pgEnum("role", ["ADMIN", "NETWORK_LEADER", "CELL_LEADER", "MEMBER"])
 export const genderEnum = pgEnum("gender", ["MALE", "FEMALE", "OTHER"])
 export const cellRoleEnum = pgEnum("cell_role", ["MEMBER", "ASSISTANT", "LEADER"])
+export const membershipTypeEnum = pgEnum("membership_type", ["MEMBER", "LEADER"])
+export const leadershipScopeEnum = pgEnum("leadership_scope", ["CELL", "NETWORK", "NONE"])
+export const membershipStatusEnum = pgEnum("membership_status", ["ACTIVE", "INACTIVE", "SUSPENDED"])
 export const registrationStatusEnum = pgEnum("registration_status", ["REGISTERED", "WAITLISTED", "CANCELLED"])
 export const audienceEnum = pgEnum("audience", ["ALL", "LEADERS", "MEMBERS"])
 export const actionEnum = pgEnum("action", [
@@ -104,7 +107,7 @@ export const userRoles = pgTable("user_roles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 
-// Cell memberships table
+// Cell memberships table (legacy - will be replaced by memberships)
 export const cellMemberships = pgTable("cell_memberships", {
   id: uuid("id").defaultRandom().primaryKey(),
   cellId: uuid("cell_id").references(() => cells.id, { onDelete: "cascade" }).notNull(),
@@ -112,6 +115,20 @@ export const cellMemberships = pgTable("cell_memberships", {
   roleInCell: cellRoleEnum("role_in_cell").default("MEMBER").notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
   active: boolean("active").default(true).notNull(),
+})
+
+// New unified memberships table
+export const memberships = pgTable("memberships", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  networkId: uuid("network_id").references(() => networks.id, { onDelete: "cascade" }),
+  cellId: uuid("cell_id").references(() => cells.id, { onDelete: "cascade" }),
+  membershipType: membershipTypeEnum("membership_type").default("MEMBER").notNull(),
+  leadershipScope: leadershipScopeEnum("leadership_scope").default("NONE").notNull(),
+  status: membershipStatusEnum("status").default("ACTIVE").notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 // Training levels table
@@ -431,3 +448,5 @@ export type VolunteerAssignment = typeof volunteerAssignments.$inferSelect
 export type NewVolunteerAssignment = typeof volunteerAssignments.$inferInsert
 export type AuditLog = typeof auditLogs.$inferSelect
 export type NewAuditLog = typeof auditLogs.$inferInsert
+export type Membership = typeof memberships.$inferSelect
+export type NewMembership = typeof memberships.$inferInsert

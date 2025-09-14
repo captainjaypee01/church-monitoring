@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Users, Building, Settings, Plus } from "lucide-react"
 import Link from "next/link"
 import { db } from "@/lib/db"
-import { networks, cells, cellMemberships, profiles, userRoles, users } from "@/lib/db/schema"
+import { networks, cells, cellMemberships, profiles, userRoles, users, memberships } from "@/lib/db/schema"
 import { count, eq, and } from "drizzle-orm"
 
 export default async function AdminNetworksPage() {
@@ -29,14 +29,16 @@ export default async function AdminNetworksPage() {
       description: networks.description,
       createdAt: networks.createdAt,
       cellCount: count(cells.id),
-      memberCount: count(cellMemberships.id),
-      networkLeaderCount: count(userRoles.id),
+      memberCount: count(memberships.id),
       networkLeaderId: userRoles.userId,
       networkLeaderName: profiles.fullName,
     })
     .from(networks)
     .leftJoin(cells, eq(networks.id, cells.networkId))
-    .leftJoin(cellMemberships, eq(cells.id, cellMemberships.cellId))
+    .leftJoin(memberships, and(
+      eq(memberships.networkId, networks.id),
+      eq(memberships.status, "ACTIVE")
+    ))
     .leftJoin(userRoles, and(
       eq(userRoles.role, "NETWORK_LEADER"),
       eq(userRoles.networkId, networks.id)
@@ -100,7 +102,7 @@ export default async function AdminNetworksPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {networksData.reduce((sum, network) => sum + Number(network.memberCount) + Number(network.networkLeaderCount), 0)}
+              {networksData.reduce((sum, network) => sum + Number(network.memberCount), 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Active members
@@ -116,7 +118,7 @@ export default async function AdminNetworksPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {networksData.length > 0 
-                ? Math.round(networksData.reduce((sum, network) => sum + Number(network.memberCount) + Number(network.networkLeaderCount), 0) / networksData.length)
+                ? Math.round(networksData.reduce((sum, network) => sum + Number(network.memberCount), 0) / networksData.length)
                 : 0
               }
             </div>
@@ -160,7 +162,7 @@ export default async function AdminNetworksPage() {
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">{Number(network.memberCount) + Number(network.networkLeaderCount)} members</p>
+                    <p className="text-sm font-medium">{network.memberCount} members</p>
                     <p className="text-xs text-muted-foreground">Total members</p>
                   </div>
                 </div>
@@ -176,7 +178,7 @@ export default async function AdminNetworksPage() {
                   <div>
                     <p className="text-sm font-medium">
                       {network.cellCount > 0 
-                        ? Math.round((Number(network.memberCount) + Number(network.networkLeaderCount)) / Number(network.cellCount))
+                        ? Math.round(Number(network.memberCount) / Number(network.cellCount))
                         : 0
                       } avg/group
                     </p>
