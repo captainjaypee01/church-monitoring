@@ -90,12 +90,14 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
                 <SelectTrigger>
                   <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a network leader"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   <SelectItem value="none">Assign later</SelectItem>
                   {networkLeaders.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.fullName || user.name} ({user.email})
-                      {user.currentRole && user.networkId ? " (Currently assigned)" : ""}
+                    <SelectItem key={user.id} value={user.id} className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{user.fullName || user.name}</span>
+                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -88,13 +88,14 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
             <SelectTrigger>
               <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a network leader"} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[200px] overflow-y-auto">
               <SelectItem value="none">No leader assigned</SelectItem>
               {networkLeaders.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.fullName || user.name} ({user.email})
-                  {user.id === networkLeader?.id ? " (Current)" : ""}
-                  {user.currentRole && user.networkId && user.id !== networkLeader?.id ? " (Assigned elsewhere)" : ""}
+                <SelectItem key={user.id} value={user.id} className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{user.fullName || user.name}</span>
+                    <span className="text-xs text-muted-foreground">{user.email}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

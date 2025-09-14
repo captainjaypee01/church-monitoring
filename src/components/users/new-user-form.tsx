@@ -239,7 +239,7 @@ export function NewUserForm() {
                   <SelectTrigger>
                     <SelectValue placeholder="Select network (optional)" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[200px] overflow-y-auto">
                     <SelectItem value="none">No network assignment</SelectItem>
                     {networks.map((network) => (
                       <SelectItem key={network.id} value={network.id}>
@@ -257,7 +257,7 @@ export function NewUserForm() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select cell group (optional)" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       <SelectItem value="none">No cell group assignment</SelectItem>
                       {cells
                         .filter((cell) => cell.networkId === selectedNetwork)

@@ -122,37 +122,61 @@ export async function updateCellAction(cellId: string, formData: FormData) {
       })
       .where(eq(cells.id, cellId))
 
-    // Handle cell leader assignment
+    // Handle cell leader assignment (support multiple leaders)
     console.log("Processing cell leader assignment:", validatedData.cellLeader)
     if (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") {
-      console.log("Assigning new cell leader:", validatedData.cellLeader, "to cell:", cellId)
+      console.log("Adding cell leader:", validatedData.cellLeader, "to cell:", cellId)
       
-      // Remove existing cell leader role for this cell
-      await db
-        .delete(userRoles)
+      // Check if this user is already a leader of this cell
+      const existingLeadership = await db
+        .select()
+        .from(userRoles)
         .where(and(
+          eq(userRoles.userId, validatedData.cellLeader),
           eq(userRoles.role, "CELL_LEADER"),
           eq(userRoles.cellId, cellId)
         ))
+        .limit(1)
 
-      // Add new cell leader role
-      await db.insert(userRoles).values({
-        userId: validatedData.cellLeader,
-        role: "CELL_LEADER",
-        networkId: validatedData.networkId,
-        cellId: cellId,
-      })
-      console.log("Cell leader updated successfully")
-    } else if (validatedData.cellLeader === "none" || validatedData.cellLeader === "") {
-      console.log("Removing cell leader from cell:", cellId)
-      // Remove existing cell leader role for this cell if "none" is selected
-      await db
-        .delete(userRoles)
-        .where(and(
-          eq(userRoles.role, "CELL_LEADER"),
-          eq(userRoles.cellId, cellId)
-        ))
-      console.log("Cell leader removed successfully")
+      if (existingLeadership.length === 0) {
+        // Add new cell leader role
+        await db.insert(userRoles).values({
+          userId: validatedData.cellLeader,
+          role: "CELL_LEADER",
+          networkId: validatedData.networkId,
+          cellId: cellId,
+        })
+
+        // Also create/update membership record with leadership flag
+        const [userProfile] = await db
+          .select({ id: profiles.id })
+          .from(profiles)
+          .where(eq(profiles.userId, validatedData.cellLeader))
+          .limit(1)
+
+        if (userProfile) {
+          // Remove any existing regular membership for this cell
+          await db.delete(memberships).where(and(
+            eq(memberships.profileId, userProfile.id),
+            eq(memberships.cellId, cellId)
+          ))
+
+          // Create new membership with leadership
+          await db.insert(memberships).values({
+            profileId: userProfile.id,
+            networkId: validatedData.networkId,
+            cellId: cellId,
+            membershipType: "LEADER",
+            leadershipScope: "CELL",
+            status: "ACTIVE",
+            joinedAt: new Date(),
+          })
+        }
+        
+        console.log("Cell leader added successfully")
+      } else {
+        console.log("User is already a leader of this cell")
+      }
     }
 
     revalidatePath("/admin/networks")
