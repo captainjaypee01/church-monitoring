@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { cells, userRoles, roles, profiles, cellMemberships } from "@/lib/db/schema"
+import { cells, userRoles, profiles, cellMemberships } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -50,21 +50,12 @@ export async function createCellAction(formData: FormData) {
 
     // Assign cell leader if specified
     if (validatedData.cellLeader && validatedData.cellLeader !== "none") {
-      // Get the CELL_LEADER role
-      const [cellLeaderRole] = await db
-        .select()
-        .from(roles)
-        .where(eq(roles.name, "CELL_LEADER"))
-        .limit(1)
-
-      if (cellLeaderRole) {
-        await db.insert(userRoles).values({
-          userId: validatedData.cellLeader,
-          role: "CELL_LEADER",
-          networkId: validatedData.networkId,
-          cellId: newCell.id,
-        })
-      }
+      await db.insert(userRoles).values({
+        userId: validatedData.cellLeader,
+        role: "CELL_LEADER",
+        networkId: validatedData.networkId,
+        cellId: newCell.id,
+      })
     }
 
     revalidatePath(`/admin/networks/${validatedData.networkId}`)

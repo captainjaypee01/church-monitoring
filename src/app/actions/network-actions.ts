@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { networks, userRoles, roles, cells } from "@/lib/db/schema"
+import { networks, userRoles, cells } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -49,21 +49,12 @@ export async function createNetworkAction(formData: FormData) {
 
     // Assign network leader if specified
     if (validatedData.networkLeader && validatedData.networkLeader !== "none") {
-      // Get the NETWORK_LEADER role
-      const [networkLeaderRole] = await db
-        .select()
-        .from(roles)
-        .where(eq(roles.name, "NETWORK_LEADER"))
-        .limit(1)
-
-      if (networkLeaderRole) {
-        await db.insert(userRoles).values({
-          userId: validatedData.networkLeader,
-          role: "NETWORK_LEADER",
-          networkId: newNetwork.id,
-          cellId: null,
-        })
-      }
+      await db.insert(userRoles).values({
+        userId: validatedData.networkLeader,
+        role: "NETWORK_LEADER",
+        networkId: newNetwork.id,
+        cellId: null,
+      })
     }
 
     revalidatePath("/admin/networks")

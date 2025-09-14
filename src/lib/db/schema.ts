@@ -65,6 +65,8 @@ export const networks = pgTable("networks", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  location: varchar("location", { length: 255 }),
+  createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -75,6 +77,8 @@ export const cells = pgTable("cells", {
   networkId: uuid("network_id").references(() => networks.id, { onDelete: "cascade" }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  leaderId: uuid("leader_id").references(() => profiles.id),
+  createdBy: uuid("created_by").references(() => users.id),
   meetingDay: varchar("meeting_day", { length: 50 }),
   meetingTime: time("meeting_time"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
