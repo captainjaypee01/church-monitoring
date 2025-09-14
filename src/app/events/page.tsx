@@ -11,17 +11,13 @@ import Link from "next/link"
 
 export default async function EventsPage() {
   const session = await auth()
-  
-  if (!session?.user) {
-    redirect("/login")
-  }
 
-  // Get user's profile
-  const [userProfile] = await db
+  // Get user's profile (if authenticated)
+  const [userProfile] = session?.user ? await db
     .select()
     .from(profiles)
     .where(eq(profiles.userId, session.user.id!))
-    .limit(1)
+    .limit(1) : [null]
 
   // Fetch upcoming events
   const upcomingEvents = await db

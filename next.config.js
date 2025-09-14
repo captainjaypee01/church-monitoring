@@ -9,6 +9,12 @@ const nextConfig = {
       },
     ],
   },
+  // Fix for Windows path issues
+  outputFileTracingRoot: __dirname,
+  experimental: {
+    // Disable webpack cache issues on Windows
+    webpackBuildWorker: false,
+  },
 }
 
 module.exports = nextConfig
