@@ -38,6 +38,8 @@ export async function createNetworkAction(formData: FormData) {
       networkLeader: formData.get("networkLeader") as string,
     }
 
+    console.log("Network creation data:", data)
+
     // Validate data
     const validatedData = networkDataSchema.parse(data)
 
@@ -54,12 +56,16 @@ export async function createNetworkAction(formData: FormData) {
 
     // Assign network leader if specified
     if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
+      console.log("Assigning network leader:", validatedData.networkLeader, "to network:", newNetwork.id)
       await db.insert(userRoles).values({
         userId: validatedData.networkLeader,
         role: "NETWORK_LEADER",
         networkId: newNetwork.id,
         cellId: null,
       })
+      console.log("Network leader assigned successfully")
+    } else {
+      console.log("No network leader assigned (value:", validatedData.networkLeader, ")")
     }
 
     revalidatePath("/admin/networks")
@@ -88,6 +94,8 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
       networkLeader: formData.get("networkLeader") as string,
     }
 
+    console.log("Network update data:", data)
+
     const validatedData = networkDataSchema.parse({
       ...data,
       createdBy: session.user.id!,
@@ -105,7 +113,9 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
       .where(eq(networks.id, networkId))
 
     // Handle network leader assignment
+    console.log("Processing network leader assignment:", validatedData.networkLeader)
     if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
+      console.log("Assigning new network leader:", validatedData.networkLeader, "to network:", networkId)
       // Remove existing network leader role for this network
       await db
         .delete(userRoles)
@@ -121,7 +131,9 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
         networkId: networkId,
         cellId: null,
       })
+      console.log("Network leader updated successfully")
     } else if (validatedData.networkLeader === "none" || validatedData.networkLeader === "") {
+      console.log("Removing network leader from network:", networkId)
       // Remove existing network leader role for this network if "none" is selected
       await db
         .delete(userRoles)
@@ -129,6 +141,7 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
           eq(userRoles.role, "NETWORK_LEADER"),
           eq(userRoles.networkId, networkId)
         ))
+      console.log("Network leader removed successfully")
     }
 
     revalidatePath("/admin/networks")

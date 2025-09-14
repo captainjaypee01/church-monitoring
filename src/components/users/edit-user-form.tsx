@@ -15,17 +15,17 @@ import { Loader2 } from "lucide-react"
 interface EditUserFormProps {
   user: {
     id: string
-    email: string
+    email: string | null
     username: string | null
     name: string
     phone: string | null
     firstName: string | null
     lastName: string | null
-    fullName: string
+    fullName: string | null
     gender: string | null
-    birthdate: Date | null
+    birthdate: string | null
     address: string | null
-    isActive: boolean
+    isActive: boolean | null
     roles: Array<{
       role: string
       networkId: string | null
@@ -42,6 +42,13 @@ export function EditUserForm({ user }: EditUserFormProps) {
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
   const [selectedRole, setSelectedRole] = useState<string>(user.roles[0]?.role || "")
+  const [selectedNetwork, setSelectedNetwork] = useState<string>(() => {
+    const currentRole = user.roles[0]
+    if (currentRole && currentRole.role === "CELL_LEADER" && currentRole.networkId) {
+      return currentRole.networkId
+    }
+    return ""
+  })
   const router = useRouter()
 
   useEffect(() => {
@@ -72,6 +79,23 @@ export function EditUserForm({ user }: EditUserFormProps) {
 
     fetchData()
   }, [])
+
+  // Handle role changes and network initialization
+  useEffect(() => {
+    const currentRole = user.roles[0]
+    
+    if (selectedRole === "CELL_LEADER") {
+      // If user has existing networkId for Cell Leader role, use it
+      if (currentRole && currentRole.networkId && !selectedNetwork) {
+        setSelectedNetwork(currentRole.networkId)
+      }
+    } else {
+      // Clear network selection for non-Cell Leader roles
+      if (selectedNetwork) {
+        setSelectedNetwork("")
+      }
+    }
+  }, [selectedRole, selectedNetwork, user.roles])
 
   // Get current user role
   const currentRole = user.roles.length > 0 ? user.roles[0] : null
@@ -115,7 +139,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                 id="email"
                 name="email"
                 type="email"
-                defaultValue={user.email}
+                defaultValue={user.email || ""}
                 placeholder="user@example.com"
               />
             </div>
@@ -230,7 +254,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
               id="isActive" 
               name="isActive" 
               value="on"
-              defaultChecked={user.isActive}
+              defaultChecked={user.isActive || false}
             />
             <Label htmlFor="isActive">Active User</Label>
           </div>
@@ -274,21 +298,44 @@ export function EditUserForm({ user }: EditUserFormProps) {
             )}
 
             {selectedRole === "CELL_LEADER" && (
-              <div className="space-y-2">
-                <Label htmlFor="cellId">Cell</Label>
-                <Select name="cellId" defaultValue={currentRole?.cellId || ""} disabled={loadingNetworks}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select cell" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Cell</SelectItem>
-                    {cells.map((cell) => (
-                      <SelectItem key={cell.id} value={cell.id}>
-                        {cell.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="networkId">Network</Label>
+                  <Select name="networkId" value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={loadingNetworks}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select network first" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Network</SelectItem>
+                      {networks.map((network) => (
+                        <SelectItem key={network.id} value={network.id}>
+                          {network.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {selectedNetwork && selectedNetwork !== "none" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="cellId">Cell</Label>
+                    <Select name="cellId" defaultValue={currentRole?.cellId || ""} disabled={loadingNetworks}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select cell" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Cell</SelectItem>
+                        {cells
+                          .filter((cell) => cell.networkId === selectedNetwork)
+                          .map((cell) => (
+                            <SelectItem key={cell.id} value={cell.id}>
+                              {cell.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
           </div>

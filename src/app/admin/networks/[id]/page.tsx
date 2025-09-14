@@ -8,7 +8,7 @@ import { EditNetworkForm } from "@/components/networks/edit-network-form"
 import { db } from "@/lib/db"
 import { networks, cells, cellMemberships, profiles, userRoles, users } from "@/lib/db/schema"
 import { eq, count, and } from "drizzle-orm"
-import { Building, Users, Settings, Trash2 } from "lucide-react"
+import { Building, Users, Settings, Trash2, Plus } from "lucide-react"
 import Link from "next/link"
 
 interface NetworkDetailPageProps {
@@ -174,10 +174,20 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
         {/* Cell Groups */}
         <Card>
           <CardHeader>
-            <CardTitle>Cell Groups</CardTitle>
-            <CardDescription>
-              Manage cell groups within this network
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Cell Groups</CardTitle>
+                <CardDescription>
+                  Manage cell groups within this network
+                </CardDescription>
+              </div>
+              <Button asChild>
+                <Link href={`/admin/networks/${id}/cells/new`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Cell Group
+                </Link>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

@@ -20,6 +20,7 @@ export function NewUserForm() {
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
   const [selectedRole, setSelectedRole] = useState<string>("")
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("")
   const router = useRouter()
 
   useEffect(() => {
@@ -50,6 +51,13 @@ export function NewUserForm() {
 
     fetchData()
   }, [])
+
+  // Handle role changes and clear network selection for non-Cell Leader roles
+  useEffect(() => {
+    if (selectedRole !== "CELL_LEADER" && selectedNetwork) {
+      setSelectedNetwork("")
+    }
+  }, [selectedRole, selectedNetwork])
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
@@ -238,20 +246,42 @@ export function NewUserForm() {
             )}
 
             {selectedRole === "CELL_LEADER" && (
-              <div className="space-y-2">
-                <Label htmlFor="cellId">Cell</Label>
-                <Select name="cellId" disabled={loadingNetworks}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select cell" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cells.map((cell) => (
-                      <SelectItem key={cell.id} value={cell.id}>
-                        {cell.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="networkId">Network</Label>
+                  <Select name="networkId" value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={loadingNetworks}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select network first" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {networks.map((network) => (
+                        <SelectItem key={network.id} value={network.id}>
+                          {network.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {selectedNetwork && (
+                  <div className="space-y-2">
+                    <Label htmlFor="cellId">Cell</Label>
+                    <Select name="cellId" disabled={loadingNetworks}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select cell" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cells
+                          .filter((cell) => cell.networkId === selectedNetwork)
+                          .map((cell) => (
+                            <SelectItem key={cell.id} value={cell.id}>
+                              {cell.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
           </div>

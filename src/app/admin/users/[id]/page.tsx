@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { EditUserForm } from "@/components/users/edit-user-form"
 import { db } from "@/lib/db"
-import { users, profiles, userRoles } from "@/lib/db/schema"
+import { users, profiles, userRoles, networks, cells } from "@/lib/db/schema"
 import { eq, and, isNull } from "drizzle-orm"
 import { Users, Mail, Phone, Calendar, MapPin, Shield, Trash2, RotateCcw } from "lucide-react"
 import Link from "next/link"
@@ -59,7 +59,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     notFound()
   }
 
-  // Get user roles
+  // Get user roles with network and cell names
   const userRolesData = await db
     .select({
       id: userRoles.id,
@@ -67,8 +67,12 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       networkId: userRoles.networkId,
       cellId: userRoles.cellId,
       createdAt: userRoles.createdAt,
+      networkName: networks.name,
+      cellName: cells.name,
     })
     .from(userRoles)
+    .leftJoin(networks, eq(userRoles.networkId, networks.id))
+    .leftJoin(cells, eq(userRoles.cellId, cells.id))
     .where(eq(userRoles.userId, id))
 
   const isDeleted = userData.deletedAt !== null
@@ -197,10 +201,10 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                   <span className="text-sm">{new Date(userData.birthdate).toLocaleDateString()}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Joined:</span>
-                <span className="text-sm">{new Date(userData.joinedAt).toLocaleDateString()}</span>
-              </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Joined:</span>
+                  <span className="text-sm">{userData.joinedAt ? new Date(userData.joinedAt).toLocaleDateString() : 'N/A'}</span>
+                </div>
             </div>
           </CardContent>
         </Card>
@@ -224,14 +228,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                 <div key={role.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <Badge variant="outline">{role.role}</Badge>
-                    {role.networkId && (
+                    {role.networkName && (
                       <span className="text-sm text-muted-foreground ml-2">
-                        Network: {role.networkId}
+                        Network: {role.networkName}
                       </span>
                     )}
-                    {role.cellId && (
+                    {role.cellName && (
                       <span className="text-sm text-muted-foreground ml-2">
-                        Cell: {role.cellId}
+                        Cell: {role.cellName}
                       </span>
                     )}
                   </div>
@@ -250,7 +254,18 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       {/* Edit Form */}
       {!isDeleted && (
         <EditUserForm user={{
-          ...userData,
+          id: userData.id,
+          email: userData.email,
+          username: userData.username,
+          name: userData.name,
+          phone: userData.phone,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          fullName: userData.fullName,
+          gender: userData.gender,
+          birthdate: userData.birthdate as string | null,
+          address: userData.address,
+          isActive: userData.isActive,
           roles: userRolesData.map(role => ({
             role: role.role,
             networkId: role.networkId,

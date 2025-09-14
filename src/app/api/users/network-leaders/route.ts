@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { users, profiles, userRoles } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
-import { eq, and } from "drizzle-orm"
+import { eq, and, isNull } from "drizzle-orm"
 import { NextResponse } from "next/server"
 
 export async function GET() {
@@ -13,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get users who have NETWORK_LEADER role or no specific role (eligible for assignment)
+    // Get all active users (eligible for network leader assignment)
     const networkLeaders = await db
       .select({
         id: users.id,
@@ -25,9 +25,10 @@ export async function GET() {
       })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.userId))
-      .leftJoin(userRoles, and(
-        eq(users.id, userRoles.userId),
-        eq(userRoles.role, "NETWORK_LEADER")
+      .leftJoin(userRoles, eq(users.id, userRoles.userId))
+      .where(and(
+        isNull(users.deletedAt),
+        eq(profiles.isActive, true)
       ))
       .orderBy(users.email)
 

@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { users, profiles, userRoles } from "@/lib/db/schema"
+import { users, profiles, userRoles, cellMemberships } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -139,6 +139,15 @@ export async function createUserAction(formData: FormData) {
         networkId: validatedData.networkId || null,
         cellId: validatedData.cellId || null,
       })
+
+      // Create cell membership if user is assigned to a cell
+      if (validatedData.cellId) {
+        await db.insert(cellMemberships).values({
+          cellId: validatedData.cellId,
+          profileId: newProfile.id,
+          roleInCell: validatedData.role === "CELL_LEADER" ? "LEADER" : "MEMBER",
+        })
+      }
     }
 
     revalidatePath("/admin/users")
@@ -273,8 +282,20 @@ export async function updateUserAction(userId: string, formData: FormData) {
 
     // Handle role assignment/update
     if (validatedData.role !== undefined) {
+      // Get user's profile for cell membership updates
+      const [userProfile] = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(eq(profiles.userId, userId))
+        .limit(1)
+
       // Remove existing roles
       await db.delete(userRoles).where(eq(userRoles.userId, userId))
+      
+      // Remove existing cell memberships
+      if (userProfile) {
+        await db.delete(cellMemberships).where(eq(cellMemberships.profileId, userProfile.id))
+      }
       
       // Add new role if provided
       if (validatedData.role) {
@@ -284,6 +305,15 @@ export async function updateUserAction(userId: string, formData: FormData) {
           networkId: validatedData.networkId || null,
           cellId: validatedData.cellId || null,
         })
+
+        // Create cell membership if user is assigned to a cell
+        if (validatedData.cellId && userProfile) {
+          await db.insert(cellMemberships).values({
+            cellId: validatedData.cellId,
+            profileId: userProfile.id,
+            roleInCell: validatedData.role === "CELL_LEADER" ? "LEADER" : "MEMBER",
+          })
+        }
       }
     }
 

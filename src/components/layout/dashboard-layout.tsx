@@ -20,7 +20,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-100">
+    <div className="min-h-screen flex bg-gray-100">
       {/* Mobile sidebar overlay */}
       <div className={cn(
         "fixed inset-0 flex z-40 md:hidden",
@@ -36,9 +36,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <Sidebar />
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden md:ml-64">
+      <div className="flex flex-col flex-1 md:ml-64">
         {/* Top header */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
+        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
           <div className="flex items-center justify-between px-4 py-4">
             <div className="flex items-center">
               <Button
@@ -70,8 +70,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6 pb-20">
-          <div className="max-w-7xl mx-auto min-h-full">
+        <main className="flex-1 p-6 pb-20">
+          <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
