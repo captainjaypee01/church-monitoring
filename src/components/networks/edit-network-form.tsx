@@ -126,6 +126,14 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
 
 
       <div className="flex justify-end space-x-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.back()}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Update Network
