@@ -49,7 +49,6 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
       if (result.success) {
         toast.success("Network created successfully!")
         router.push("/admin/networks")
-        router.refresh()
       } else {
         toast.error(result.error || "Failed to create network")
       }

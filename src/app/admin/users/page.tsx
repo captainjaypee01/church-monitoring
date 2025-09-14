@@ -169,9 +169,9 @@ export default async function AdminUsersPage() {
                       </Badge>
                       {user.roles.length > 0 && !user.deletedAt && (
                         <div className="flex space-x-1">
-                          {user.roles.map((role, index) => (
+                          {Array.from(new Set(user.roles.map(role => role.role))).map((roleType, index) => (
                             <Badge key={index} variant="outline">
-                              {role.role.replace(/_/g, ' ')}
+                              {roleType.replace(/_/g, ' ')}
                             </Badge>
                           ))}
                         </div>
