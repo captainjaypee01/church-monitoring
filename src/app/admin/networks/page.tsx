@@ -30,6 +30,7 @@ export default async function AdminNetworksPage() {
       createdAt: networks.createdAt,
       cellCount: count(cells.id),
       memberCount: count(cellMemberships.id),
+      networkLeaderCount: count(userRoles.id),
       networkLeaderId: userRoles.userId,
       networkLeaderName: profiles.fullName,
     })
@@ -99,7 +100,7 @@ export default async function AdminNetworksPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {networksData.reduce((sum, network) => sum + Number(network.memberCount), 0)}
+              {networksData.reduce((sum, network) => sum + Number(network.memberCount) + Number(network.networkLeaderCount), 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Active members
@@ -115,7 +116,7 @@ export default async function AdminNetworksPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {networksData.length > 0 
-                ? Math.round(networksData.reduce((sum, network) => sum + Number(network.memberCount), 0) / networksData.length)
+                ? Math.round(networksData.reduce((sum, network) => sum + Number(network.memberCount) + Number(network.networkLeaderCount), 0) / networksData.length)
                 : 0
               }
             </div>
@@ -159,7 +160,7 @@ export default async function AdminNetworksPage() {
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">{network.memberCount} members</p>
+                    <p className="text-sm font-medium">{Number(network.memberCount) + Number(network.networkLeaderCount)} members</p>
                     <p className="text-xs text-muted-foreground">Total members</p>
                   </div>
                 </div>
@@ -175,7 +176,7 @@ export default async function AdminNetworksPage() {
                   <div>
                     <p className="text-sm font-medium">
                       {network.cellCount > 0 
-                        ? Math.round(Number(network.memberCount) / Number(network.cellCount))
+                        ? Math.round((Number(network.memberCount) + Number(network.networkLeaderCount)) / Number(network.cellCount))
                         : 0
                       } avg/group
                     </p>

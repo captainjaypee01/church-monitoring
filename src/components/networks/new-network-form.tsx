@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createNetworkAction } from "@/app/actions/network-actions"
+import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 interface NewNetworkFormProps {
@@ -17,8 +18,6 @@ interface NewNetworkFormProps {
 
 export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
   const [networkLeaders, setNetworkLeaders] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
@@ -43,21 +42,19 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
-    setError("")
-    setMessage("")
 
     try {
       const result = await createNetworkAction(formData)
       
       if (result.success) {
-        setMessage("Network created successfully!")
+        toast.success("Network created successfully!")
         router.push("/admin/networks")
         router.refresh()
       } else {
-        setError(result.error || "Failed to create network")
+        toast.error(result.error || "Failed to create network")
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      toast.error("An unexpected error occurred")
       console.error("Network creation error:", err)
     } finally {
       setIsLoading(false)
@@ -125,17 +122,6 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
             />
           </div>
 
-          {message && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-              {message}
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-              {error}
-            </div>
-          )}
 
           <div className="flex justify-end space-x-2">
             <Button

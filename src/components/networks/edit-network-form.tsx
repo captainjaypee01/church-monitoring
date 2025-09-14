@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { updateNetworkAction } from "@/app/actions/network-actions"
+import { toast } from "sonner"
 import { Loader2, Trash2 } from "lucide-react"
 
 interface EditNetworkFormProps {
@@ -25,8 +26,6 @@ interface EditNetworkFormProps {
 
 export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
   const [networkLeaders, setNetworkLeaders] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
@@ -51,20 +50,18 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
-    setError("")
-    setMessage("")
 
     try {
       const result = await updateNetworkAction(network.id, formData)
       
       if (result.success) {
-        setMessage("Network updated successfully!")
+        toast.success("Network updated successfully!")
         router.refresh()
       } else {
-        setError(result.error || "Failed to update network")
+        toast.error(result.error || "Failed to update network")
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      toast.error("An unexpected error occurred")
       console.error("Network update error:", err)
     } finally {
       setIsLoading(false)
@@ -126,17 +123,6 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
         />
       </div>
 
-      {message && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-          {error}
-        </div>
-      )}
 
       <div className="flex justify-end space-x-2">
         <Button type="submit" disabled={isLoading}>
