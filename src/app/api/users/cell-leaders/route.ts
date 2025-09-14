@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     // Get users who have CELL_LEADER role (eligible for cell leader assignment)
-    const cellLeaders = await db
+    const cellLeadersRaw = await db
       .select({
         id: users.id,
         email: users.email,
@@ -35,7 +35,16 @@ export async function GET() {
       ))
       .orderBy(users.email)
 
-    return NextResponse.json({ users: cellLeaders })
+    // Deduplicate users by ID (in case they have multiple CELL_LEADER roles)
+    const uniqueCellLeaders = cellLeadersRaw.reduce((acc, current) => {
+      const existingUser = acc.find(user => user.id === current.id)
+      if (!existingUser) {
+        acc.push(current)
+      }
+      return acc
+    }, [] as typeof cellLeadersRaw)
+
+    return NextResponse.json({ users: uniqueCellLeaders })
   } catch (error) {
     console.error("Error fetching cell leaders:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

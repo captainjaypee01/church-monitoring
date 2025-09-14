@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     // Get users who have NETWORK_LEADER role (eligible for network leader assignment)
-    const networkLeaders = await db
+    const networkLeadersRaw = await db
       .select({
         id: users.id,
         email: users.email,
@@ -35,7 +35,16 @@ export async function GET() {
       ))
       .orderBy(users.email)
 
-    return NextResponse.json({ users: networkLeaders })
+    // Deduplicate users by ID (in case they have multiple NETWORK_LEADER roles)
+    const uniqueNetworkLeaders = networkLeadersRaw.reduce((acc, current) => {
+      const existingUser = acc.find(user => user.id === current.id)
+      if (!existingUser) {
+        acc.push(current)
+      }
+      return acc
+    }, [] as typeof networkLeadersRaw)
+
+    return NextResponse.json({ users: uniqueNetworkLeaders })
   } catch (error) {
     console.error("Error fetching network leaders:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
