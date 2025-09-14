@@ -152,19 +152,19 @@ export default async function CellDetailPage({ params }: CellDetailPageProps) {
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/networks/${networkId}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to {network.name}
-          </Link>
-        </Button>
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{cell.name}</h1>
           <p className="text-muted-foreground">
             Cell group management for {network.name}
           </p>
         </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/networks/${networkId}`}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to {network.name}
+          </Link>
+        </Button>
       </div>
 
       {/* Stats Cards */}
