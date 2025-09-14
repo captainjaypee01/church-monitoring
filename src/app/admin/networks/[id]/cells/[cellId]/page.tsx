@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { EditCellForm } from "@/components/cells/edit-cell-form"
 import { db } from "@/lib/db"
-import { networks, cells, cellMemberships, profiles, userRoles, users } from "@/lib/db/schema"
+import { networks, cells, cellMemberships, profiles, userRoles, users, memberships } from "@/lib/db/schema"
 import { eq, count, and } from "drizzle-orm"
 import { Building, Users, Settings, ArrowLeft } from "lucide-react"
 import Link from "next/link"
@@ -18,7 +18,7 @@ interface CellDetailPageProps {
 export default async function CellDetailPage({ params }: CellDetailPageProps) {
   const session = await auth()
   const { id: networkId, cellId } = await params
-  
+  console.log('networkId', networkId, 'cellId', cellId)
   if (!session?.user) {
     redirect("/login")
   }
@@ -49,46 +49,105 @@ export default async function CellDetailPage({ params }: CellDetailPageProps) {
     notFound()
   }
 
-  // Get cell leader
-  const cellLeaderResult = await db
-    .select({
-      id: users.id,
-      fullName: profiles.fullName,
-      email: users.email,
-    })
-    .from(userRoles)
-    .innerJoin(users, eq(userRoles.userId, users.id))
-    .innerJoin(profiles, eq(users.id, profiles.userId))
-    .where(and(
-      eq(userRoles.role, "CELL_LEADER"),
-      eq(userRoles.cellId, cellId)
-    ))
-    .limit(1)
+  // Get cell leader(s) - can be multiple now
+  let cellLeader = null
+  
+  try {
+    const cellLeaderResult = await db
+      .select({
+        id: users.id,
+        fullName: profiles.fullName,
+        email: users.email,
+      })
+      .from(userRoles)
+      .innerJoin(users, eq(userRoles.userId, users.id))
+      .innerJoin(profiles, eq(users.id, profiles.userId))
+      .where(and(
+        eq(userRoles.role, "CELL_LEADER"),
+        eq(userRoles.cellId, cellId)
+      ))
+      .limit(1) // For now, just get the first leader for display
 
-  const cellLeader = cellLeaderResult[0] || null
+    cellLeader = (cellLeaderResult && cellLeaderResult[0]) || null
+  } catch (error) {
+    console.error("Error fetching cell leader:", error)
+    cellLeader = null
+  }
 
-  // Get cell members
-  const cellMembers = await db
-    .select({
-      id: profiles.id,
-      fullName: profiles.fullName,
-      email: users.email,
-      roleInCell: cellMemberships.roleInCell,
-      joinedAt: cellMemberships.createdAt,
-    })
-    .from(cellMemberships)
-    .innerJoin(profiles, eq(cellMemberships.profileId, profiles.id))
-    .innerJoin(users, eq(profiles.userId, users.id))
-    .where(eq(cellMemberships.cellId, cellId))
-    .orderBy(profiles.fullName)
+  // Get cell members from new memberships table with fallback to legacy cellMemberships
+  let cellMembers = []
+  let memberCount = 0
 
-  // Get member count
-  const memberCountResult = await db
-    .select({ count: count() })
-    .from(cellMemberships)
-    .where(eq(cellMemberships.cellId, cellId))
+  try {
+    // Try new memberships table first
+    const newMembersResult = await db
+      .select({
+        id: profiles.id,
+        fullName: profiles.fullName,
+        email: users.email,
+        roleInCell: memberships.membershipType, // Map membershipType to roleInCell
+        joinedAt: memberships.joinedAt,
+      })
+      .from(memberships)
+      .innerJoin(profiles, eq(memberships.profileId, profiles.id))
+      .innerJoin(users, eq(profiles.userId, users.id))
+      .where(and(
+        eq(memberships.cellId, cellId),
+        eq(memberships.status, "ACTIVE")
+      ))
+      .orderBy(profiles.fullName)
 
-  const memberCount = (memberCountResult && memberCountResult[0]?.count) || 0
+    // Get member count from new memberships table
+    const newMemberCountResult = await db
+      .select({ count: count() })
+      .from(memberships)
+      .where(and(
+        eq(memberships.cellId, cellId),
+        eq(memberships.status, "ACTIVE")
+      ))
+
+    if (newMembersResult && newMembersResult.length > 0) {
+      // Use new memberships data
+      cellMembers = newMembersResult.map(member => ({
+        ...member,
+        roleInCell: member.roleInCell === "LEADER" ? "LEADER" : "MEMBER" // Convert to legacy format
+      }))
+      memberCount = (newMemberCountResult && newMemberCountResult[0]?.count) || 0
+    } else {
+      // Fallback to legacy cellMemberships table
+      const legacyMembersResult = await db
+        .select({
+          id: profiles.id,
+          fullName: profiles.fullName,
+          email: users.email,
+          roleInCell: cellMemberships.roleInCell,
+          joinedAt: cellMemberships.joinedAt,
+        })
+        .from(cellMemberships)
+        .innerJoin(profiles, eq(cellMemberships.profileId, profiles.id))
+        .innerJoin(users, eq(profiles.userId, users.id))
+        .where(and(
+          eq(cellMemberships.cellId, cellId),
+          eq(cellMemberships.active, true)
+        ))
+        .orderBy(profiles.fullName)
+
+      const legacyMemberCountResult = await db
+        .select({ count: count() })
+        .from(cellMemberships)
+        .where(and(
+          eq(cellMemberships.cellId, cellId),
+          eq(cellMemberships.active, true)
+        ))
+
+      cellMembers = legacyMembersResult || []
+      memberCount = (legacyMemberCountResult && legacyMemberCountResult[0]?.count) || 0
+    }
+  } catch (error) {
+    console.error("Error fetching cell members:", error)
+    cellMembers = []
+    memberCount = 0
+  }
 
   return (
     <div className="space-y-6 pb-8">
@@ -186,26 +245,26 @@ export default async function CellDetailPage({ params }: CellDetailPageProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {cellMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+              {(cellMembers || []).map((member) => (
+                <div key={member?.id || Math.random()} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <p className="font-medium">{member.fullName}</p>
+                    <p className="font-medium">{member?.fullName || "Unknown Member"}</p>
                     <p className="text-sm text-muted-foreground">
-                      {member.email}
+                      {member?.email || "No email"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Joined: {new Date(member.joinedAt).toLocaleDateString()}
+                      Joined: {member?.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : "Unknown date"}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant={member.roleInCell === "LEADER" ? "default" : "secondary"}>
-                      {member.roleInCell}
+                    <Badge variant={member?.roleInCell === "LEADER" ? "default" : "secondary"}>
+                      {member?.roleInCell || "MEMBER"}
                     </Badge>
                   </div>
                 </div>
               ))}
               
-              {cellMembers.length === 0 && (
+              {(!cellMembers || cellMembers.length === 0) && (
                 <div className="text-center py-6">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
                   <p className="text-muted-foreground mb-4">No members yet</p>
