@@ -28,12 +28,13 @@ import Image from "next/image"
 import { EventRegistrationButton } from "@/components/events/event-registration-button"
 
 interface EventDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
+  const { id } = await params
   const session = await auth()
   
   if (!session?.user) {

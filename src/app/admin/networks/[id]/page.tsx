@@ -39,11 +39,11 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
   }
 
   // Get network leader
-  const [networkLeader] = await db
+  const networkLeaderResult = await db
     .select({
       id: profiles.id,
       fullName: profiles.fullName,
-      email: profiles.user?.email,
+      email: users.email,
     })
     .from(userRoles)
     .innerJoin(profiles, eq(userRoles.userId, profiles.userId))
@@ -53,6 +53,8 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
       eq(userRoles.networkId, id)
     ))
     .limit(1)
+
+  const networkLeader = networkLeaderResult[0] || null
 
   // Get cells in this network
   const networkCells = await db
@@ -70,11 +72,13 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
     .groupBy(cells.id, profiles.fullName)
 
   // Get total members in network
-  const [totalMembers] = await db
+  const totalMembersResult = await db
     .select({ count: count() })
     .from(cellMemberships)
     .innerJoin(cells, eq(cellMemberships.cellId, cells.id))
     .where(eq(cells.networkId, id))
+
+  const totalMembers = totalMembersResult[0] || { count: 0 }
 
   return (
     <div className="space-y-6">
@@ -115,7 +119,7 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalMembers?.count || 0}</div>
+            <div className="text-2xl font-bold">{totalMembers.count}</div>
             <p className="text-xs text-muted-foreground">
               Across all cells
             </p>
