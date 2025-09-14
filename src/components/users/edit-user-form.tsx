@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { updateUserAction } from "@/app/actions/user-actions"
+import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 interface EditUserFormProps {
@@ -36,8 +37,6 @@ interface EditUserFormProps {
 
 export function EditUserForm({ user }: EditUserFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
   const [networks, setNetworks] = useState<any[]>([])
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
@@ -102,20 +101,18 @@ export function EditUserForm({ user }: EditUserFormProps) {
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
-    setError("")
-    setMessage("")
 
     try {
       const result = await updateUserAction(user.id, formData)
       
       if (result.success) {
-        setMessage("User updated successfully!")
+        toast.success("User updated successfully!")
         router.refresh()
       } else {
-        setError(result.error || "Failed to update user")
+        toast.error(result.error || "Failed to update user")
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      toast.error("An unexpected error occurred")
       console.error("User update error:", err)
     } finally {
       setIsLoading(false)
@@ -340,17 +337,6 @@ export function EditUserForm({ user }: EditUserFormProps) {
             )}
           </div>
 
-          {message && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-              {message}
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-              {error}
-            </div>
-          )}
 
           <div className="flex justify-end">
             <Button type="submit" disabled={isLoading}>

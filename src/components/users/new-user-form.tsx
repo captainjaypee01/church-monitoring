@@ -10,12 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { createUserAction } from "@/app/actions/user-actions"
+import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 export function NewUserForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
   const [networks, setNetworks] = useState<any[]>([])
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
@@ -61,21 +60,19 @@ export function NewUserForm() {
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
-    setError("")
-    setMessage("")
 
     try {
       const result = await createUserAction(formData)
       
       if (result.success) {
-        setMessage("User created successfully!")
+        toast.success("User created successfully!")
         router.push("/admin/users")
         router.refresh()
       } else {
-        setError(result.error || "Failed to create user")
+        toast.error(result.error || "Failed to create user")
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      toast.error("An unexpected error occurred")
       console.error("User creation error:", err)
     } finally {
       setIsLoading(false)
@@ -286,17 +283,6 @@ export function NewUserForm() {
             )}
           </div>
 
-          {message && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-              {message}
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-              {error}
-            </div>
-          )}
 
           <div className="flex justify-end space-x-2">
             <Button

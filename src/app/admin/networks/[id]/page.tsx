@@ -41,13 +41,13 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
   // Get network leader
   const networkLeaderResult = await db
     .select({
-      id: profiles.id,
+      id: users.id,
       fullName: profiles.fullName,
       email: users.email,
     })
     .from(userRoles)
-    .innerJoin(profiles, eq(userRoles.userId, profiles.userId))
-    .innerJoin(users, eq(profiles.userId, users.id))
+    .innerJoin(users, eq(userRoles.userId, users.id))
+    .innerJoin(profiles, eq(users.id, profiles.userId))
     .where(and(
       eq(userRoles.role, "NETWORK_LEADER"),
       eq(userRoles.networkId, id)
