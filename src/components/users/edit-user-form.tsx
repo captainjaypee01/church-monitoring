@@ -41,13 +41,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
   const [selectedRole, setSelectedRole] = useState<string>(user.roles[0]?.role || "")
-  const [selectedNetwork, setSelectedNetwork] = useState<string>(() => {
-    const currentRole = user.roles[0]
-    if (currentRole && currentRole.role === "CELL_LEADER" && currentRole.networkId) {
-      return currentRole.networkId
-    }
-    return ""
-  })
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("none")
   const router = useRouter()
 
   useEffect(() => {
@@ -257,33 +251,40 @@ export function EditUserForm({ user }: EditUserFormProps) {
           </div>
 
           <div className="space-y-4 border-t pt-4">
-            <h3 className="text-lg font-medium">Role Assignment</h3>
+            <h3 className="text-lg font-medium">Role & Membership</h3>
             
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Role (Capabilities)</Label>
               <Select name="role" value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a role (optional)" />
+                  <SelectValue placeholder="Select user role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No Role</SelectItem>
                   <SelectItem value="MEMBER">Member</SelectItem>
-                  <SelectItem value="CELL_LEADER">Cell Leader</SelectItem>
-                  <SelectItem value="NETWORK_LEADER">Network Leader</SelectItem>
+                  <SelectItem value="CELL_LEADER">Cell Leader (can lead cell groups)</SelectItem>
+                  <SelectItem value="NETWORK_LEADER">Network Leader (can lead networks)</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Role defines what this user is capable of doing in the system
+              </p>
             </div>
 
-            {selectedRole === "NETWORK_LEADER" && (
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="font-medium">Membership Assignment</h4>
+              <p className="text-sm text-muted-foreground">
+                Assign which network/cell group this user belongs to as a member
+              </p>
+              
               <div className="space-y-2">
-                <Label htmlFor="networkId">Network</Label>
-                <Select name="networkId" defaultValue={currentRole?.networkId || ""} disabled={loadingNetworks}>
+                <Label htmlFor="networkId">Member of Network</Label>
+                <Select name="networkId" value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={loadingNetworks}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select network" />
+                    <SelectValue placeholder="Select network (optional)" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Network</SelectItem>
+                  <SelectContent className="max-h-[200px] overflow-y-auto">
+                    <SelectItem value="none">No network assignment</SelectItem>
                     {networks.map((network) => (
                       <SelectItem key={network.id} value={network.id}>
                         {network.name}
@@ -292,49 +293,35 @@ export function EditUserForm({ user }: EditUserFormProps) {
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            {selectedRole === "CELL_LEADER" && (
-              <div className="space-y-4">
+              {selectedNetwork && selectedNetwork !== "none" && (
                 <div className="space-y-2">
-                  <Label htmlFor="networkId">Network</Label>
-                  <Select name="networkId" value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={loadingNetworks}>
+                  <Label htmlFor="cellId">Member of Cell Group</Label>
+                  <Select name="cellId" disabled={loadingNetworks}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select network first" />
+                      <SelectValue placeholder="Select cell group (optional)" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Network</SelectItem>
-                      {networks.map((network) => (
-                        <SelectItem key={network.id} value={network.id}>
-                          {network.name}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
+                      <SelectItem value="none">No cell group assignment</SelectItem>
+                      {cells
+                        .filter((cell) => cell.networkId === selectedNetwork)
+                        .map((cell) => (
+                          <SelectItem key={cell.id} value={cell.id}>
+                            {cell.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
-                
-                {selectedNetwork && selectedNetwork !== "none" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="cellId">Cell</Label>
-                    <Select name="cellId" defaultValue={currentRole?.cellId || ""} disabled={loadingNetworks}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select cell" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Cell</SelectItem>
-                        {cells
-                          .filter((cell) => cell.networkId === selectedNetwork)
-                          .map((cell) => (
-                            <SelectItem key={cell.id} value={cell.id}>
-                              {cell.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+              )}
+              
+              <div className="bg-blue-50 p-3 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Leadership assignments (who leads which network/cell) are done separately 
+                  in the Network Management and Cell Management pages.
+                </p>
               </div>
-            )}
+            </div>
           </div>
 
 
