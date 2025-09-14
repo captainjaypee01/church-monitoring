@@ -15,6 +15,13 @@
       "when": 1757831733967,
       "tag": "0001_sad_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1757833253123,
+      "tag": "0002_organic_whirlwind",
+      "breakpoints": true
     }
   ]
 }

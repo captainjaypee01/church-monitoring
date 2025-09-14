@@ -21,7 +21,7 @@ export default async function AdminUsersPage() {
     redirect("/dashboard")
   }
 
-  // Fetch all users with their profiles and roles
+  // Fetch all users with their profiles and roles (including soft deleted)
   const usersData = await db
     .select({
       id: users.id,
@@ -30,12 +30,13 @@ export default async function AdminUsersPage() {
       fullName: profiles.fullName,
       isActive: profiles.isActive,
       joinedAt: profiles.joinedAt,
+      deletedAt: users.deletedAt,
       roleCount: count(userRoles.id),
     })
     .from(users)
     .leftJoin(profiles, eq(users.id, profiles.userId))
     .leftJoin(userRoles, eq(users.id, userRoles.userId))
-    .groupBy(users.id, profiles.fullName, profiles.isActive, profiles.joinedAt)
+    .groupBy(users.id, profiles.fullName, profiles.isActive, profiles.joinedAt, users.deletedAt)
     .orderBy(users.email)
 
   return (
@@ -63,9 +64,9 @@ export default async function AdminUsersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{usersData.length}</div>
+            <div className="text-2xl font-bold">{usersData.filter(user => !user.deletedAt).length}</div>
             <p className="text-xs text-muted-foreground">
-              Registered users
+              Active users
             </p>
           </CardContent>
         </Card>
@@ -77,7 +78,7 @@ export default async function AdminUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {usersData.filter(user => user.isActive).length}
+              {usersData.filter(user => user.isActive && !user.deletedAt).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Active profiles
@@ -92,7 +93,7 @@ export default async function AdminUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {usersData.filter(user => Number(user.roleCount) > 0).length}
+              {usersData.filter(user => Number(user.roleCount) > 0 && !user.deletedAt).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Users with assigned roles
@@ -102,20 +103,15 @@ export default async function AdminUsersPage() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
+            <CardTitle className="text-sm font-medium">Deleted Users</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {usersData.filter(user => {
-                if (!user.joinedAt) return false
-                const oneMonthAgo = new Date()
-                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-                return new Date(user.joinedAt) > oneMonthAgo
-              }).length}
+              {usersData.filter(user => user.deletedAt).length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Recent members
+              Soft deleted accounts
             </p>
           </CardContent>
         </Card>
@@ -141,10 +137,10 @@ export default async function AdminUsersPage() {
                     <p className="font-medium">{user.fullName || user.name || "No name"}</p>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                     <div className="flex items-center space-x-2 mt-1">
-                      <Badge variant={user.isActive ? "default" : "secondary"}>
-                        {user.isActive ? "Active" : "Inactive"}
+                      <Badge variant={user.deletedAt ? "destructive" : user.isActive ? "default" : "secondary"}>
+                        {user.deletedAt ? "Deleted" : user.isActive ? "Active" : "Inactive"}
                       </Badge>
-                      {Number(user.roleCount) > 0 && (
+                      {Number(user.roleCount) > 0 && !user.deletedAt && (
                         <Badge variant="outline">
                           {user.roleCount} role{Number(user.roleCount) !== 1 ? 's' : ''}
                         </Badge>
