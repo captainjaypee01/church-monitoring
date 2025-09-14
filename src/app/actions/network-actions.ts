@@ -165,27 +165,36 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
     // Handle network leader assignment (support multiple leaders)
     console.log("Processing network leaders assignment:", validatedData.networkLeaders)
     
-    if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
-      console.log("Adding network leader:", validatedData.networkLeader, "to network:", networkId)
+    // First, remove ALL current network leaders for this network
+    await db.delete(userRoles).where(and(
+      eq(userRoles.role, "NETWORK_LEADER"),
+      eq(userRoles.networkId, networkId)
+    ))
+    
+    // Also remove leadership memberships for this network
+    await db.delete(memberships).where(and(
+      eq(memberships.networkId, networkId),
+      eq(memberships.membershipType, "LEADER"),
+      eq(memberships.leadershipScope, "NETWORK")
+    ))
+    
+    console.log("Cleared existing network leadership assignments")
+    
+    // Assign new network leaders if specified
+    if (validatedData.networkLeaders && validatedData.networkLeaders.length > 0) {
+      console.log("Assigning new network leaders:", validatedData.networkLeaders)
       
-      // Check if this user is already a leader of this network
-      const existingLeadership = await db
-        .select()
-        .from(userRoles)
-        .where(and(
-          eq(userRoles.userId, validatedData.networkLeader),
-          eq(userRoles.role, "NETWORK_LEADER"),
-          eq(userRoles.networkId, networkId)
-        ))
-        .limit(1)
-
-      if (existingLeadership.length === 0) {
-        // Handle existing NETWORK_LEADER roles for this user
+      for (const leaderId of validatedData.networkLeaders) {
+        if (!leaderId || leaderId === "none" || leaderId === "") continue
+        
+        console.log("Processing leader:", leaderId)
+        
+        // Handle existing NETWORK_LEADER roles for this user (from other networks)
         const existingRoles = await db
           .select()
           .from(userRoles)
           .where(and(
-            eq(userRoles.userId, validatedData.networkLeader),
+            eq(userRoles.userId, leaderId),
             eq(userRoles.role, "NETWORK_LEADER")
           ))
 
@@ -193,16 +202,16 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
           // Delete all existing NETWORK_LEADER roles for this user
           await db.delete(userRoles)
             .where(and(
-              eq(userRoles.userId, validatedData.networkLeader),
+              eq(userRoles.userId, leaderId),
               eq(userRoles.role, "NETWORK_LEADER")
             ))
           
-          console.log(`Cleaned up ${existingRoles.length} existing NETWORK_LEADER roles for user`)
+          console.log(`Cleaned up ${existingRoles.length} existing NETWORK_LEADER roles for user ${leaderId}`)
         }
 
         // Create a single new role with network assignment
         await db.insert(userRoles).values({
-          userId: validatedData.networkLeader,
+          userId: leaderId,
           role: "NETWORK_LEADER",
           networkId: networkId,
           cellId: null,
@@ -212,11 +221,11 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
         const [userProfile] = await db
           .select({ id: profiles.id })
           .from(profiles)
-          .where(eq(profiles.userId, validatedData.networkLeader))
+          .where(eq(profiles.userId, leaderId))
           .limit(1)
 
         if (userProfile) {
-          // Remove any existing regular membership for this network
+          // Remove existing membership for this network
           await db.delete(memberships).where(and(
             eq(memberships.profileId, userProfile.id),
             eq(memberships.networkId, networkId)
@@ -234,10 +243,10 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
           })
         }
         
-        console.log("Network leader added successfully")
-      } else {
-        console.log("User is already a leader of this network")
+        console.log("Network leader assigned successfully:", leaderId)
       }
+    } else {
+      console.log("No network leaders assigned")
     }
 
     revalidatePath("/admin/networks")
