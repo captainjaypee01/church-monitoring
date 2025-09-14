@@ -5,7 +5,7 @@ import { ChevronDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
 export interface Option {
@@ -38,16 +38,16 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
 
-  const handleSelect = (optionValue: string) => {
+  const handleSelect = React.useCallback((optionValue: string) => {
     const newSelected = selected.includes(optionValue)
       ? selected.filter((item) => item !== optionValue)
       : [...selected, optionValue]
     onChange(newSelected)
-  }
+  }, [selected, onChange])
 
-  const handleRemove = (optionValue: string) => {
+  const handleRemove = React.useCallback((optionValue: string) => {
     onChange(selected.filter((item) => item !== optionValue))
-  }
+  }, [selected, onChange])
 
   const filteredOptions = options.filter((option) =>
     option.label.toLowerCase().includes(search.toLowerCase()) ||
@@ -72,14 +72,16 @@ export function MultiSelect({
                 <Badge
                   key={option.value}
                   variant="secondary"
-                  className="text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleRemove(option.value)
-                  }}
+                  className="text-xs flex items-center gap-1"
                 >
-                  {option.label}
-                  <X className="h-3 w-3 ml-1 cursor-pointer" />
+                  <span>{option.label}</span>
+                  <X 
+                    className="h-3 w-3 cursor-pointer hover:bg-gray-200 rounded" 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemove(option.value)
+                    }}
+                  />
                 </Badge>
               ))
             ) : (
@@ -114,10 +116,16 @@ export function MultiSelect({
                   className="flex items-center space-x-2 p-2 hover:bg-gray-100 cursor-pointer rounded"
                   onClick={() => handleSelect(option.value)}
                 >
-                  <Checkbox
-                    checked={selected.includes(option.value)}
-                    onCheckedChange={() => {}} // Controlled by parent div click
-                  />
+                  <div className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-primary",
+                    selected.includes(option.value) 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-background"
+                  )}>
+                    {selected.includes(option.value) && (
+                      <Check className="h-3 w-3" />
+                    )}
+                  </div>
                   <div className="flex flex-col">
                     <span className="font-medium text-sm">{option.label}</span>
                     {option.email && (
