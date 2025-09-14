@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Users, Building, Settings, Plus } from "lucide-react"
 import Link from "next/link"
 import { db } from "@/lib/db"
-import { networks, cells, cellMemberships, profiles } from "@/lib/db/schema"
-import { count, eq } from "drizzle-orm"
+import { networks, cells, cellMemberships, profiles, userRoles, users } from "@/lib/db/schema"
+import { count, eq, and } from "drizzle-orm"
 
 export default async function AdminNetworksPage() {
   const session = await auth()
@@ -21,7 +21,7 @@ export default async function AdminNetworksPage() {
     redirect("/dashboard")
   }
 
-  // Fetch all networks with their cells and member counts
+  // Fetch all networks with their cells, member counts, and network leaders
   const networksData = await db
     .select({
       id: networks.id,
@@ -30,11 +30,19 @@ export default async function AdminNetworksPage() {
       createdAt: networks.createdAt,
       cellCount: count(cells.id),
       memberCount: count(cellMemberships.id),
+      networkLeaderId: userRoles.userId,
+      networkLeaderName: profiles.fullName,
     })
     .from(networks)
     .leftJoin(cells, eq(networks.id, cells.networkId))
     .leftJoin(cellMemberships, eq(cells.id, cellMemberships.cellId))
-    .groupBy(networks.id)
+    .leftJoin(userRoles, and(
+      eq(userRoles.role, "NETWORK_LEADER"),
+      eq(userRoles.networkId, networks.id)
+    ))
+    .leftJoin(users, eq(userRoles.userId, users.id))
+    .leftJoin(profiles, eq(users.id, profiles.userId))
+    .groupBy(networks.id, userRoles.userId, profiles.fullName)
     .orderBy(networks.name)
 
   return (
@@ -147,7 +155,7 @@ export default async function AdminNetworksPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-4">
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <div>
@@ -172,6 +180,15 @@ export default async function AdminNetworksPage() {
                       } avg/group
                     </p>
                     <p className="text-xs text-muted-foreground">Members per cell</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">
+                      {network.networkLeaderName || "No leader"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Network leader</p>
                   </div>
                 </div>
               </div>

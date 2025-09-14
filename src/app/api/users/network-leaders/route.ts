@@ -13,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get all active users (eligible for network leader assignment)
+    // Get users who have NETWORK_LEADER role (eligible for network leader assignment)
     const networkLeaders = await db
       .select({
         id: users.id,
@@ -24,8 +24,11 @@ export async function GET() {
         networkId: userRoles.networkId,
       })
       .from(users)
-      .leftJoin(profiles, eq(users.id, profiles.userId))
-      .leftJoin(userRoles, eq(users.id, userRoles.userId))
+      .innerJoin(profiles, eq(users.id, profiles.userId))
+      .innerJoin(userRoles, and(
+        eq(users.id, userRoles.userId),
+        eq(userRoles.role, "NETWORK_LEADER")
+      ))
       .where(and(
         isNull(users.deletedAt),
         eq(profiles.isActive, true)
