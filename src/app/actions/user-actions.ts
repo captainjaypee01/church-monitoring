@@ -59,9 +59,9 @@ export async function createUserAction(formData: FormData) {
       birthdate: formData.get("birthdate") as string,
       address: formData.get("address") as string,
       isActive: formData.get("isActive") === "true",
-      role: formData.get("role") as string || undefined,
-      networkId: formData.get("networkId") as string || undefined,
-      cellId: formData.get("cellId") as string || undefined,
+      role: (formData.get("role") as string) === "none" ? undefined : (formData.get("role") as string || undefined),
+      networkId: (formData.get("networkId") as string) === "none" ? undefined : (formData.get("networkId") as string || undefined),
+      cellId: (formData.get("cellId") as string) === "none" ? undefined : (formData.get("cellId") as string || undefined),
     }
 
     // Validate data
@@ -166,9 +166,9 @@ export async function updateUserAction(userId: string, formData: FormData) {
       birthdate: formData.get("birthdate") as string,
       address: formData.get("address") as string,
       isActive: formData.get("isActive") === "true",
-      role: formData.get("role") as string || undefined,
-      networkId: formData.get("networkId") as string || undefined,
-      cellId: formData.get("cellId") as string || undefined,
+      role: (formData.get("role") as string) === "none" ? undefined : (formData.get("role") as string || undefined),
+      networkId: (formData.get("networkId") as string) === "none" ? undefined : (formData.get("networkId") as string || undefined),
+      cellId: (formData.get("cellId") as string) === "none" ? undefined : (formData.get("cellId") as string || undefined),
     }
 
     // Validate data
@@ -227,10 +227,25 @@ export async function updateUserAction(userId: string, formData: FormData) {
       updatedAt: new Date(),
     }
     
-    if (validatedData.firstName) profileUpdateData.firstName = validatedData.firstName
-    if (validatedData.lastName) profileUpdateData.lastName = validatedData.lastName
-    if (validatedData.firstName || validatedData.lastName) {
-      profileUpdateData.fullName = `${validatedData.firstName || ''} ${validatedData.lastName || ''}`.trim()
+    if (validatedData.firstName !== undefined) profileUpdateData.firstName = validatedData.firstName
+    if (validatedData.lastName !== undefined) profileUpdateData.lastName = validatedData.lastName
+    
+    // Update fullName if either firstName or lastName is provided
+    if (validatedData.firstName !== undefined || validatedData.lastName !== undefined) {
+      // Get current profile data to preserve existing values
+      const currentProfile = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userId))
+        .limit(1)
+      
+      const currentFirstName = currentProfile[0]?.firstName || ''
+      const currentLastName = currentProfile[0]?.lastName || ''
+      
+      const newFirstName = validatedData.firstName !== undefined ? validatedData.firstName : currentFirstName
+      const newLastName = validatedData.lastName !== undefined ? validatedData.lastName : currentLastName
+      
+      profileUpdateData.fullName = `${newFirstName} ${newLastName}`.trim()
     }
     if (validatedData.gender !== undefined) profileUpdateData.gender = validatedData.gender || null
     if (validatedData.birthdate !== undefined) {

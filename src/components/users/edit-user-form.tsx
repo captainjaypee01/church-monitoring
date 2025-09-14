@@ -243,7 +243,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                   <SelectValue placeholder="Select a role (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Role</SelectItem>
+                  <SelectItem value="none">No Role</SelectItem>
                   <SelectItem value="MEMBER">Member</SelectItem>
                   <SelectItem value="CELL_LEADER">Cell Leader</SelectItem>
                   <SelectItem value="NETWORK_LEADER">Network Leader</SelectItem>
@@ -260,7 +260,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                     <SelectValue placeholder="Select network" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Network</SelectItem>
+                    <SelectItem value="none">No Network</SelectItem>
                     {networks.map((network) => (
                       <SelectItem key={network.id} value={network.id}>
                         {network.name}
@@ -277,7 +277,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                     <SelectValue placeholder="Select cell" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Cell</SelectItem>
+                    <SelectItem value="none">No Cell</SelectItem>
                     {cells.map((cell) => (
                       <SelectItem key={cell.id} value={cell.id}>
                         {cell.name}
