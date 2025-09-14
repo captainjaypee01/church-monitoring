@@ -11,7 +11,6 @@ import { eq, and } from "drizzle-orm"
 const cellDataSchema = z.object({
   name: z.string().min(1, "Cell name is required"),
   description: z.string().optional(),
-  location: z.string().optional(),
   networkId: z.string().min(1, "Network ID is required"),
   cellLeader: z.string().optional().refine((val) => {
     if (!val || val === "none" || val === "") return true
@@ -33,7 +32,6 @@ export async function createCellAction(formData: FormData) {
     const data = {
       name: formData.get("name") as string,
       description: formData.get("description") as string || "",
-      location: formData.get("location") as string || "",
       networkId: formData.get("networkId") as string,
       cellLeader: formData.get("cellLeader") as string || "",
     }
@@ -57,7 +55,6 @@ export async function createCellAction(formData: FormData) {
       .values({
         name: validatedData.name,
         description: validatedData.description || null,
-        location: validatedData.location || null,
         networkId: validatedData.networkId,
         createdBy: session.user.id!,
       })
@@ -110,7 +107,6 @@ export async function updateCellAction(cellId: string, formData: FormData) {
     const data = {
       name: formData.get("name") as string,
       description: formData.get("description") as string || "",
-      location: formData.get("location") as string || "",
       networkId: formData.get("networkId") as string,
       cellLeader: formData.get("cellLeader") as string || "",
     }
@@ -133,7 +129,6 @@ export async function updateCellAction(cellId: string, formData: FormData) {
       .set({
         name: validatedData.name,
         description: validatedData.description || null,
-        location: validatedData.location || null,
         updatedAt: new Date(),
       })
       .where(eq(cells.id, cellId))

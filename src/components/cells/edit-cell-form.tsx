@@ -16,7 +16,6 @@ interface EditCellFormProps {
     id: string
     name: string
     description: string | null
-    location: string | null
   }
   cellLeader?: {
     id: string
@@ -132,15 +131,6 @@ export function EditCellForm({ cell, cellLeader, networkId }: EditCellFormProps)
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          name="location"
-          defaultValue={cell?.location || ""}
-          placeholder="e.g., Conference Room A, Online, Home of John Doe"
-        />
-      </div>
 
       <div className="flex justify-end space-x-2">
         <Button type="submit" disabled={isLoading}>
