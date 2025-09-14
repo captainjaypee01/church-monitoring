@@ -196,7 +196,7 @@ export function NewUserForm() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <Switch id="isActive" name="isActive" defaultChecked />
+            <Switch id="isActive" name="isActive" value="on" defaultChecked />
             <Label htmlFor="isActive">Active User</Label>
           </div>
 

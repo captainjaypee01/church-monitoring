@@ -228,6 +228,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
             <Switch 
               id="isActive" 
               name="isActive" 
+              value="on"
               defaultChecked={user.isActive}
             />
             <Label htmlFor="isActive">Active User</Label>

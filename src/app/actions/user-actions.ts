@@ -58,11 +58,17 @@ export async function createUserAction(formData: FormData) {
       gender: formData.get("gender") as string,
       birthdate: formData.get("birthdate") as string,
       address: formData.get("address") as string,
-      isActive: formData.get("isActive") === "true",
+      isActive: formData.has("isActive"),
       role: (formData.get("role") as string) === "none" ? undefined : (formData.get("role") as string || undefined),
       networkId: (formData.get("networkId") as string) === "none" ? undefined : (formData.get("networkId") as string || undefined),
       cellId: (formData.get("cellId") as string) === "none" ? undefined : (formData.get("cellId") as string || undefined),
     }
+
+    console.log("Form data debug:", {
+      isActiveValue: formData.get("isActive"),
+      hasIsActive: formData.has("isActive"),
+      allKeys: Array.from(formData.keys())
+    })
 
     // Validate data
     const validatedData = userDataSchema.parse(data)
@@ -165,11 +171,17 @@ export async function updateUserAction(userId: string, formData: FormData) {
       gender: formData.get("gender") as string,
       birthdate: formData.get("birthdate") as string,
       address: formData.get("address") as string,
-      isActive: formData.get("isActive") === "true",
+      isActive: formData.has("isActive"),
       role: (formData.get("role") as string) === "none" ? undefined : (formData.get("role") as string || undefined),
       networkId: (formData.get("networkId") as string) === "none" ? undefined : (formData.get("networkId") as string || undefined),
       cellId: (formData.get("cellId") as string) === "none" ? undefined : (formData.get("cellId") as string || undefined),
     }
+
+    console.log("Update form data debug:", {
+      isActiveValue: formData.get("isActive"),
+      hasIsActive: formData.has("isActive"),
+      allKeys: Array.from(formData.keys())
+    })
 
     // Validate data
     const validatedData = userUpdateSchema.parse(data)
