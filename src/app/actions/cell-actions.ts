@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { cells, userRoles } from "@/lib/db/schema"
+import { cells, userRoles, memberships, profiles } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"

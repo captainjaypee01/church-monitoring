@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { networks, userRoles, cells } from "@/lib/db/schema"
+import { networks, userRoles, cells, memberships, profiles } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -57,12 +57,47 @@ export async function createNetworkAction(formData: FormData) {
     // Assign network leader if specified
     if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
       console.log("Assigning network leader:", validatedData.networkLeader, "to network:", newNetwork.id)
+      
+      // Remove any existing network leadership role for this user
+      await db.delete(userRoles).where(and(
+        eq(userRoles.userId, validatedData.networkLeader),
+        eq(userRoles.role, "NETWORK_LEADER")
+      ))
+
+      // Create leadership role assignment
       await db.insert(userRoles).values({
         userId: validatedData.networkLeader,
         role: "NETWORK_LEADER",
         networkId: newNetwork.id,
         cellId: null,
       })
+
+      // Also create/update membership record with leadership flag
+      const [userProfile] = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(eq(profiles.userId, validatedData.networkLeader))
+        .limit(1)
+
+      if (userProfile) {
+        // Remove existing membership for this network
+        await db.delete(memberships).where(and(
+          eq(memberships.profileId, userProfile.id),
+          eq(memberships.networkId, newNetwork.id)
+        ))
+
+        // Create new membership with leadership
+        await db.insert(memberships).values({
+          profileId: userProfile.id,
+          networkId: newNetwork.id,
+          cellId: null,
+          membershipType: "LEADER",
+          leadershipScope: "NETWORK",
+          status: "ACTIVE",
+          joinedAt: new Date(),
+        })
+      }
+      
       console.log("Network leader assigned successfully")
     } else {
       console.log("No network leader assigned (value:", validatedData.networkLeader, ")")
@@ -114,16 +149,22 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
 
     // Handle network leader assignment
     console.log("Processing network leader assignment:", validatedData.networkLeader)
+    
+    // First, remove any existing leadership memberships for this network
+    await db.delete(memberships).where(and(
+      eq(memberships.networkId, networkId),
+      eq(memberships.leadershipScope, "NETWORK")
+    ))
+    
+    // Remove existing network leader roles for this network
+    await db.delete(userRoles).where(and(
+      eq(userRoles.role, "NETWORK_LEADER"),
+      eq(userRoles.networkId, networkId)
+    ))
+    
     if (validatedData.networkLeader && validatedData.networkLeader !== "none" && validatedData.networkLeader !== "") {
       console.log("Assigning new network leader:", validatedData.networkLeader, "to network:", networkId)
-      // Remove existing network leader role for this network
-      await db
-        .delete(userRoles)
-        .where(and(
-          eq(userRoles.role, "NETWORK_LEADER"),
-          eq(userRoles.networkId, networkId)
-        ))
-
+      
       // Add new network leader role
       await db.insert(userRoles).values({
         userId: validatedData.networkLeader,
@@ -131,16 +172,30 @@ export async function updateNetworkAction(networkId: string, formData: FormData)
         networkId: networkId,
         cellId: null,
       })
+
+      // Also create/update membership record with leadership flag
+      const [userProfile] = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(eq(profiles.userId, validatedData.networkLeader))
+        .limit(1)
+
+      if (userProfile) {
+        // Create new membership with leadership
+        await db.insert(memberships).values({
+          profileId: userProfile.id,
+          networkId: networkId,
+          cellId: null,
+          membershipType: "LEADER",
+          leadershipScope: "NETWORK",
+          status: "ACTIVE",
+          joinedAt: new Date(),
+        })
+      }
+      
       console.log("Network leader updated successfully")
-    } else if (validatedData.networkLeader === "none" || validatedData.networkLeader === "") {
+    } else {
       console.log("Removing network leader from network:", networkId)
-      // Remove existing network leader role for this network if "none" is selected
-      await db
-        .delete(userRoles)
-        .where(and(
-          eq(userRoles.role, "NETWORK_LEADER"),
-          eq(userRoles.networkId, networkId)
-        ))
       console.log("Network leader removed successfully")
     }
 

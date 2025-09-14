@@ -132,37 +132,39 @@ export async function createUserAction(formData: FormData) {
       })
       .returning()
 
-    // Handle membership and leadership assignment
-    if (validatedData.networkId || validatedData.cellId) {
-      // Create membership record
+    // Handle membership assignment (separate from role capabilities)
+    const networkId = validatedData.networkId && validatedData.networkId !== "none" ? validatedData.networkId : null
+    const cellId = validatedData.cellId && validatedData.cellId !== "none" ? validatedData.cellId : null
+    
+    if (networkId || cellId) {
+      // Create membership record (just for membership, not leadership)
       await db.insert(memberships).values({
         profileId: newProfile.id,
-        networkId: validatedData.networkId || null,
-        cellId: validatedData.cellId || null,
-        membershipType: validatedData.role && ["NETWORK_LEADER", "CELL_LEADER"].includes(validatedData.role) ? "LEADER" : "MEMBER",
-        leadershipScope: validatedData.role === "NETWORK_LEADER" ? "NETWORK" : 
-                        validatedData.role === "CELL_LEADER" ? "CELL" : "NONE",
+        networkId: networkId,
+        cellId: cellId,
+        membershipType: "MEMBER", // Always member for user assignment
+        leadershipScope: "NONE",  // Leadership is assigned separately
         status: "ACTIVE",
         joinedAt: new Date(),
       })
 
       // Also create legacy cellMemberships record for backward compatibility
-      if (validatedData.cellId) {
+      if (cellId) {
         await db.insert(cellMemberships).values({
-          cellId: validatedData.cellId,
+          cellId: cellId,
           profileId: newProfile.id,
-          roleInCell: validatedData.role === "CELL_LEADER" ? "LEADER" : "MEMBER",
+          roleInCell: "MEMBER", // Always member for user assignment
         })
       }
     }
 
-    // Create leadership role if specified
+    // Create role capability record (not leadership assignment)
     if (validatedData.role && validatedData.role !== "MEMBER") {
       await db.insert(userRoles).values({
         userId: newUser.id,
         role: validatedData.role as any,
-        networkId: validatedData.networkId || null,
-        cellId: validatedData.cellId || null,
+        networkId: null,  // No specific assignment, just capability
+        cellId: null,     // No specific assignment, just capability
       })
     }
 
@@ -311,36 +313,39 @@ export async function updateUserAction(userId: string, formData: FormData) {
         await db.delete(cellMemberships).where(eq(cellMemberships.profileId, userProfile.id))
         await db.delete(userRoles).where(eq(userRoles.userId, userId))
         
-        // Create new membership if user is assigned to network/cell
-        if (validatedData.networkId || validatedData.cellId) {
+        // Handle membership assignment (separate from role capabilities)
+        const networkId = validatedData.networkId && validatedData.networkId !== "none" ? validatedData.networkId : null
+        const cellId = validatedData.cellId && validatedData.cellId !== "none" ? validatedData.cellId : null
+        
+        if (networkId || cellId) {
+          // Create membership record (just for membership, not leadership)
           await db.insert(memberships).values({
             profileId: userProfile.id,
-            networkId: validatedData.networkId || null,
-            cellId: validatedData.cellId || null,
-            membershipType: validatedData.role && ["NETWORK_LEADER", "CELL_LEADER"].includes(validatedData.role) ? "LEADER" : "MEMBER",
-            leadershipScope: validatedData.role === "NETWORK_LEADER" ? "NETWORK" : 
-                            validatedData.role === "CELL_LEADER" ? "CELL" : "NONE",
+            networkId: networkId,
+            cellId: cellId,
+            membershipType: "MEMBER", // Always member for user assignment
+            leadershipScope: "NONE",  // Leadership is assigned separately
             status: "ACTIVE",
             joinedAt: new Date(),
           })
 
           // Create legacy cellMemberships record for backward compatibility
-          if (validatedData.cellId) {
+          if (cellId) {
             await db.insert(cellMemberships).values({
-              cellId: validatedData.cellId,
+              cellId: cellId,
               profileId: userProfile.id,
-              roleInCell: validatedData.role === "CELL_LEADER" ? "LEADER" : "MEMBER",
+              roleInCell: "MEMBER", // Always member for user assignment
             })
           }
         }
 
-        // Create leadership role if specified
+        // Create role capability record (not leadership assignment)
         if (validatedData.role && validatedData.role !== "MEMBER") {
           await db.insert(userRoles).values({
             userId,
             role: validatedData.role as any,
-            networkId: validatedData.networkId || null,
-            cellId: validatedData.cellId || null,
+            networkId: null,  // No specific assignment, just capability
+            cellId: null,     // No specific assignment, just capability
           })
         }
       }
