@@ -81,6 +81,7 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
             <input key={leaderId} type="hidden" name="networkLeaders" value={leaderId} />
           ))}
           
+          {/* Row 1: Network Name | Location */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Network Name *</Label>
@@ -93,22 +94,16 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="networkLeaders">Network Leaders</Label>
-              <MultiSelect
-                options={networkLeaders}
-                selected={selectedLeaders}
-                onChange={setSelectedLeaders}
-                placeholder={loadingUsers ? "Loading users..." : "Select network leaders"}
-                searchPlaceholder="Search leaders..."
-                emptyMessage="No network leaders found"
-                disabled={loadingUsers}
+              <Label htmlFor="location">Location/Area</Label>
+              <Input
+                id="location"
+                name="location"
+                placeholder="e.g., Downtown District, North Side, East Region"
               />
-              <p className="text-xs text-muted-foreground">
-                Select one or more users to lead this network. You can add more leaders later.
-              </p>
             </div>
           </div>
 
+          {/* Row 2: Description (full width) */}
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
@@ -119,13 +114,21 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
             />
           </div>
 
+          {/* Row 3: Network Leaders (full width) */}
           <div className="space-y-2">
-            <Label htmlFor="location">Location/Area</Label>
-            <Input
-              id="location"
-              name="location"
-              placeholder="e.g., Downtown District, North Side, East Region"
+            <Label htmlFor="networkLeaders">Network Leaders</Label>
+            <MultiSelect
+              options={networkLeaders}
+              selected={selectedLeaders}
+              onChange={setSelectedLeaders}
+              placeholder={loadingUsers ? "Loading users..." : "Select network leaders"}
+              searchPlaceholder="Search leaders..."
+              emptyMessage="No network leaders found"
+              disabled={loadingUsers}
             />
+            <p className="text-xs text-muted-foreground">
+              Select one or more users to lead this network. You can add more leaders later.
+            </p>
           </div>
 
 
