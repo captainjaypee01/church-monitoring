@@ -29,7 +29,7 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
   const [networkLeaders, setNetworkLeaders] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
-  console.log('network', network);
+
   useEffect(() => {
     const fetchNetworkLeaders = async () => {
       try {

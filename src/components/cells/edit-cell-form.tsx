@@ -53,13 +53,24 @@ export function EditCellForm({ cell, cellLeader, networkId }: EditCellFormProps)
     setIsLoading(true)
 
     try {
+      // Add defensive checks
+      if (!cell?.id) {
+        toast.error("Cell ID is missing")
+        return
+      }
+      
+      if (!networkId) {
+        toast.error("Network ID is missing")
+        return
+      }
+
       const result = await updateCellAction(cell.id, formData)
       
-      if (result.success) {
+      if (result?.success) {
         toast.success("Cell updated successfully!")
         router.refresh()
       } else {
-        toast.error(result.error || "Failed to update cell")
+        toast.error(result?.error || "Failed to update cell")
       }
     } catch (err) {
       toast.error("An unexpected error occurred")
@@ -69,9 +80,14 @@ export function EditCellForm({ cell, cellLeader, networkId }: EditCellFormProps)
     }
   }
 
+  // Safety check
+  if (!cell) {
+    return <div>Cell data not available</div>
+  }
+
   return (
     <form action={handleSubmit} className="space-y-6">
-      <input type="hidden" name="networkId" value={networkId} />
+      <input type="hidden" name="networkId" value={networkId || ""} />
       
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
@@ -79,7 +95,7 @@ export function EditCellForm({ cell, cellLeader, networkId }: EditCellFormProps)
           <Input
             id="name"
             name="name"
-            defaultValue={cell.name}
+            defaultValue={cell.name || ""}
             placeholder="e.g., Youth Cell, Family Cell"
             required
           />
@@ -93,11 +109,11 @@ export function EditCellForm({ cell, cellLeader, networkId }: EditCellFormProps)
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No leader assigned</SelectItem>
-              {cellLeaders.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.fullName || user.name} ({user.email})
-                  {user.id === cellLeader?.id ? " (Current)" : ""}
-                  {user.currentRole && user.cellId && user.id !== cellLeader?.id ? " (Assigned elsewhere)" : ""}
+              {(cellLeaders || []).map((user) => (
+                <SelectItem key={user?.id || Math.random()} value={user?.id || ""}>
+                  {user?.fullName || user?.name || "Unknown"} ({user?.email || "No email"})
+                  {user?.id === cellLeader?.id ? " (Current)" : ""}
+                  {user?.currentRole && user?.cellId && user?.id !== cellLeader?.id ? " (Assigned elsewhere)" : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -110,7 +126,7 @@ export function EditCellForm({ cell, cellLeader, networkId }: EditCellFormProps)
         <Textarea
           id="description"
           name="description"
-          defaultValue={cell.description || ""}
+          defaultValue={cell?.description || ""}
           placeholder="Describe the cell group's purpose, target audience, or any special notes..."
           rows={3}
         />
@@ -121,7 +137,7 @@ export function EditCellForm({ cell, cellLeader, networkId }: EditCellFormProps)
         <Input
           id="location"
           name="location"
-          defaultValue={cell.location || ""}
+          defaultValue={cell?.location || ""}
           placeholder="e.g., Conference Room A, Online, Home of John Doe"
         />
       </div>

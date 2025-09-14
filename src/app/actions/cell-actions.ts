@@ -32,13 +32,21 @@ export async function createCellAction(formData: FormData) {
     // Parse form data
     const data = {
       name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      location: formData.get("location") as string,
+      description: formData.get("description") as string || "",
+      location: formData.get("location") as string || "",
       networkId: formData.get("networkId") as string,
-      cellLeader: formData.get("cellLeader") as string,
+      cellLeader: formData.get("cellLeader") as string || "",
     }
 
     console.log("Cell creation data:", data)
+
+    // Check for required fields
+    if (!data.name) {
+      return { success: false, error: "Cell name is required" }
+    }
+    if (!data.networkId) {
+      return { success: false, error: "Network ID is required" }
+    }
 
     // Validate data
     const validatedData = cellDataSchema.parse(data)
@@ -101,13 +109,21 @@ export async function updateCellAction(cellId: string, formData: FormData) {
 
     const data = {
       name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      location: formData.get("location") as string,
+      description: formData.get("description") as string || "",
+      location: formData.get("location") as string || "",
       networkId: formData.get("networkId") as string,
-      cellLeader: formData.get("cellLeader") as string,
+      cellLeader: formData.get("cellLeader") as string || "",
     }
 
     console.log("Cell update data:", data)
+
+    // Check for required fields
+    if (!data.name) {
+      return { success: false, error: "Cell name is required" }
+    }
+    if (!data.networkId) {
+      return { success: false, error: "Network ID is required" }
+    }
 
     const validatedData = cellDataSchema.parse(data)
 

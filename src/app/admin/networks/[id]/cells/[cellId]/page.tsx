@@ -83,12 +83,12 @@ export default async function CellDetailPage({ params }: CellDetailPageProps) {
     .orderBy(profiles.fullName)
 
   // Get member count
-  const [memberCountResult] = await db
+  const memberCountResult = await db
     .select({ count: count() })
     .from(cellMemberships)
     .where(eq(cellMemberships.cellId, cellId))
 
-  const memberCount = memberCountResult?.count || 0
+  const memberCount = (memberCountResult && memberCountResult[0]?.count) || 0
 
   return (
     <div className="space-y-6 pb-8">
