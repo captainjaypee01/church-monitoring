@@ -1,0 +1,170 @@
+import { auth } from "@/lib/auth"
+import { redirect } from "next/navigation"
+import { isAdmin } from "@/lib/rbac"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { db } from "@/lib/db"
+import { users, profiles, userRoles, roles } from "@/lib/db/schema"
+import { eq, count } from "drizzle-orm"
+import { Users, UserCheck, Settings, Mail } from "lucide-react"
+import Link from "next/link"
+
+export default async function AdminUsersPage() {
+  const session = await auth()
+  
+  if (!session?.user) {
+    redirect("/login")
+  }
+
+  if (!isAdmin(session)) {
+    redirect("/dashboard")
+  }
+
+  // Fetch all users with their profiles and roles
+  const usersData = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      fullName: profiles.fullName,
+      isActive: profiles.isActive,
+      joinedAt: profiles.joinedAt,
+      roleCount: count(userRoles.id),
+    })
+    .from(users)
+    .leftJoin(profiles, eq(users.id, profiles.userId))
+    .leftJoin(userRoles, eq(users.id, userRoles.userId))
+    .groupBy(users.id, profiles.fullName, profiles.isActive, profiles.joinedAt)
+    .orderBy(users.email)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <p className="text-muted-foreground">
+            Manage church members, assign roles, and oversee user accounts.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/users/new">
+            <Users className="h-4 w-4 mr-2" />
+            Add User
+          </Link>
+        </Button>
+      </div>
+
+      {/* User Statistics */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{usersData.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Registered users
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Members</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {usersData.filter(user => user.isActive).length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Active profiles
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">With Roles</CardTitle>
+            <Settings className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {usersData.filter(user => Number(user.roleCount) > 0).length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Users with assigned roles
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
+            <Mail className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {usersData.filter(user => {
+                if (!user.joinedAt) return false
+                const oneMonthAgo = new Date()
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+                return new Date(user.joinedAt) > oneMonthAgo
+              }).length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recent members
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Users List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Users</CardTitle>
+          <CardDescription>
+            Manage user accounts and role assignments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {usersData.map((user) => (
+              <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Users className="h-5 w-5 text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{user.fullName || user.name || "No name"}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Badge variant={user.isActive ? "default" : "secondary"}>
+                        {user.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                      {Number(user.roleCount) > 0 && (
+                        <Badge variant="outline">
+                          {user.roleCount} role{Number(user.roleCount) !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/admin/users/${user.id}`}>
+                      <Settings className="h-4 w-4 mr-1" />
+                      Manage
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
