@@ -53,7 +53,10 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
       eq(userRoles.networkId, id)
     ))
 
-  const networkLeaders = networkLeadersResult || []
+  const networkLeaders = (networkLeadersResult || []).map(leader => ({
+    ...leader,
+    email: leader.email || ""
+  }))
 
   // Get cells in this network
   const networkCells = await db
@@ -132,15 +135,18 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Network Leader</CardTitle>
+            <CardTitle className="text-sm font-medium">Network Leaders</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {networkLeader ? "Assigned" : "None"}
+              {networkLeaders.length > 0 ? networkLeaders.length : "None"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {networkLeader?.fullName || "No leader assigned"}
+              {networkLeaders.length > 0 
+                ? networkLeaders.map(leader => leader.fullName).join(", ")
+                : "No leaders assigned"
+              }
             </p>
           </CardContent>
         </Card>
