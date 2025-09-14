@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MultiSelect, Option } from "@/components/ui/multi-select"
 import { createNetworkAction } from "@/app/actions/network-actions"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -18,7 +18,8 @@ interface NewNetworkFormProps {
 
 export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [networkLeaders, setNetworkLeaders] = useState<any[]>([])
+  const [networkLeaders, setNetworkLeaders] = useState<Option[]>([])
+  const [selectedLeaders, setSelectedLeaders] = useState<string[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
 
@@ -28,7 +29,12 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
         const response = await fetch('/api/users/network-leaders')
         if (response.ok) {
           const data = await response.json()
-          setNetworkLeaders(data.users || [])
+          const formattedLeaders = (data.users || []).map((user: any) => ({
+            value: user.id,
+            label: user.fullName || user.name,
+            email: user.email,
+          }))
+          setNetworkLeaders(formattedLeaders)
         }
       } catch (error) {
         console.error('Error fetching network leaders:', error)
@@ -71,6 +77,9 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
       <CardContent>
         <form action={handleSubmit} className="space-y-6">
           <input type="hidden" name="createdBy" value={currentUserId} />
+          {selectedLeaders.map((leaderId) => (
+            <input key={leaderId} type="hidden" name="networkLeaders" value={leaderId} />
+          ))}
           
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -84,23 +93,19 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="networkLeader">Network Leader</Label>
-              <Select name="networkLeader" disabled={loadingUsers}>
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a network leader"} />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  <SelectItem value="none">Assign later</SelectItem>
-                  {networkLeaders.map((user) => (
-                    <SelectItem key={user.id} value={user.id} className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{user.fullName || user.name}</span>
-                        <span className="text-xs text-muted-foreground">{user.email}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="networkLeaders">Network Leaders</Label>
+              <MultiSelect
+                options={networkLeaders}
+                selected={selectedLeaders}
+                onChange={setSelectedLeaders}
+                placeholder={loadingUsers ? "Loading users..." : "Select network leaders"}
+                searchPlaceholder="Search leaders..."
+                emptyMessage="No network leaders found"
+                disabled={loadingUsers}
+              />
+              <p className="text-xs text-muted-foreground">
+                Select one or more users to lead this network. You can add more leaders later.
+              </p>
             </div>
           </div>
 

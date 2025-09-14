@@ -38,8 +38,8 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
     notFound()
   }
 
-  // Get network leader
-  const networkLeaderResult = await db
+  // Get network leaders (can be multiple)
+  const networkLeadersResult = await db
     .select({
       id: users.id,
       fullName: profiles.fullName,
@@ -52,9 +52,8 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
       eq(userRoles.role, "NETWORK_LEADER"),
       eq(userRoles.networkId, id)
     ))
-    .limit(1)
 
-  const networkLeader = networkLeaderResult[0] || null
+  const networkLeaders = networkLeadersResult || []
 
   // Get cells in this network
   const networkCells = await db
@@ -172,7 +171,7 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EditNetworkForm network={network} networkLeader={networkLeader} />
+            <EditNetworkForm network={network} networkLeaders={networkLeaders} />
           </CardContent>
         </Card>
 

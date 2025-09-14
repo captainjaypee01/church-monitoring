@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MultiSelect, Option } from "@/components/ui/multi-select"
 import { updateNetworkAction } from "@/app/actions/network-actions"
 import { toast } from "sonner"
 import { Loader2, Trash2 } from "lucide-react"
@@ -18,15 +18,19 @@ interface EditNetworkFormProps {
     description: string | null
     location: string | null
   }
-  networkLeader?: {
+  networkLeaders: {
     id: string
     fullName: string
-  } | null
+    email: string
+  }[]
 }
 
-export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps) {
+export function EditNetworkForm({ network, networkLeaders: currentLeaders }: EditNetworkFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [networkLeaders, setNetworkLeaders] = useState<any[]>([])
+  const [networkLeaders, setNetworkLeaders] = useState<Option[]>([])
+  const [selectedLeaders, setSelectedLeaders] = useState<string[]>(
+    currentLeaders.map(leader => leader.id)
+  )
   const [loadingUsers, setLoadingUsers] = useState(true)
   const router = useRouter()
 
@@ -36,7 +40,12 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
         const response = await fetch('/api/users/network-leaders')
         if (response.ok) {
           const data = await response.json()
-          setNetworkLeaders(data.users || [])
+          const formattedLeaders = (data.users || []).map((user: any) => ({
+            value: user.id,
+            label: user.fullName || user.name,
+            email: user.email,
+          }))
+          setNetworkLeaders(formattedLeaders)
         }
       } catch (error) {
         console.error('Error fetching network leaders:', error)
@@ -70,6 +79,9 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
 
   return (
     <form action={handleSubmit} className="space-y-6">
+      {selectedLeaders.map((leaderId) => (
+        <input key={leaderId} type="hidden" name="networkLeaders" value={leaderId} />
+      ))}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="name">Network Name *</Label>
@@ -83,23 +95,19 @@ export function EditNetworkForm({ network, networkLeader }: EditNetworkFormProps
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="networkLeader">Network Leader</Label>
-          <Select name="networkLeader" defaultValue={networkLeader?.id || "none"} disabled={loadingUsers}>
-            <SelectTrigger>
-              <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a network leader"} />
-            </SelectTrigger>
-            <SelectContent className="max-h-[200px] overflow-y-auto">
-              <SelectItem value="none">No leader assigned</SelectItem>
-              {networkLeaders.map((user) => (
-                <SelectItem key={user.id} value={user.id} className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{user.fullName || user.name}</span>
-                    <span className="text-xs text-muted-foreground">{user.email}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="networkLeaders">Network Leaders</Label>
+          <MultiSelect
+            options={networkLeaders}
+            selected={selectedLeaders}
+            onChange={setSelectedLeaders}
+            placeholder={loadingUsers ? "Loading users..." : "Select network leaders"}
+            searchPlaceholder="Search leaders..."
+            emptyMessage="No network leaders found"
+            disabled={loadingUsers}
+          />
+          <p className="text-xs text-muted-foreground">
+            Current leaders: {currentLeaders.map(l => l.fullName).join(', ') || 'None'}
+          </p>
         </div>
       </div>
 
