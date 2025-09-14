@@ -171,7 +171,7 @@ export default async function AdminUsersPage() {
                         <div className="flex space-x-1">
                           {user.roles.map((role, index) => (
                             <Badge key={index} variant="outline">
-                              {role.role}
+                              {role.role.replace(/_/g, ' ')}
                             </Badge>
                           ))}
                         </div>

@@ -9,7 +9,7 @@ import { z } from "zod"
 import { eq, and, isNull, or } from "drizzle-orm"
 import bcrypt from "bcryptjs"
 
-const userDataSchema = z.object({
+const baseUserSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
   username: z.string().min(1, "Username is required").optional(),
   name: z.string().min(1, "Display name is required"),
@@ -21,7 +21,9 @@ const userDataSchema = z.object({
   birthdate: z.string().optional(),
   address: z.string().optional(),
   isActive: z.boolean().default(true),
-}).refine(
+})
+
+const userDataSchema = baseUserSchema.refine(
   (data) => data.email || data.username,
   {
     message: "Either email or username is required",
@@ -29,7 +31,7 @@ const userDataSchema = z.object({
   }
 )
 
-const userUpdateSchema = userDataSchema.partial().omit({ password: true }).extend({
+const userUpdateSchema = baseUserSchema.partial().omit({ password: true }).extend({
   password: z.string().optional(),
 })
 
