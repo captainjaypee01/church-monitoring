@@ -19,6 +19,7 @@ export function NewUserForm() {
   const [networks, setNetworks] = useState<any[]>([])
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<string>("")
   const router = useRouter()
 
   useEffect(() => {
@@ -205,7 +206,7 @@ export function NewUserForm() {
             
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select name="role">
+              <Select name="role" value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role (optional)" />
                 </SelectTrigger>
@@ -218,9 +219,9 @@ export function NewUserForm() {
               </Select>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            {selectedRole === "NETWORK_LEADER" && (
               <div className="space-y-2">
-                <Label htmlFor="networkId">Network (for Network Leader)</Label>
+                <Label htmlFor="networkId">Network</Label>
                 <Select name="networkId" disabled={loadingNetworks}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select network" />
@@ -234,9 +235,11 @@ export function NewUserForm() {
                   </SelectContent>
                 </Select>
               </div>
+            )}
 
+            {selectedRole === "CELL_LEADER" && (
               <div className="space-y-2">
-                <Label htmlFor="cellId">Cell (for Cell Leader)</Label>
+                <Label htmlFor="cellId">Cell</Label>
                 <Select name="cellId" disabled={loadingNetworks}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select cell" />
@@ -250,7 +253,7 @@ export function NewUserForm() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            )}
           </div>
 
           {message && (

@@ -41,6 +41,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
   const [networks, setNetworks] = useState<any[]>([])
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<string>(user.roles[0]?.role || "")
   const router = useRouter()
 
   useEffect(() => {
@@ -125,7 +126,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                 id="username"
                 name="username"
                 type="text"
-                defaultValue={user.username}
+                defaultValue={user.username || ""}
                 placeholder="username"
               />
             </div>
@@ -158,7 +159,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
               <Input
                 id="firstName"
                 name="firstName"
-                defaultValue={user.firstName}
+                defaultValue={user.firstName || ""}
                 placeholder="e.g., John"
                 required
               />
@@ -169,7 +170,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
               <Input
                 id="lastName"
                 name="lastName"
-                defaultValue={user.lastName}
+                defaultValue={user.lastName || ""}
                 placeholder="e.g., Smith"
                 required
               />
@@ -239,7 +240,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
             
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select name="role" defaultValue={currentRole?.role || ""}>
+              <Select name="role" value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role (optional)" />
                 </SelectTrigger>
@@ -253,9 +254,9 @@ export function EditUserForm({ user }: EditUserFormProps) {
               </Select>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            {selectedRole === "NETWORK_LEADER" && (
               <div className="space-y-2">
-                <Label htmlFor="networkId">Network (for Network Leader)</Label>
+                <Label htmlFor="networkId">Network</Label>
                 <Select name="networkId" defaultValue={currentRole?.networkId || ""} disabled={loadingNetworks}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select network" />
@@ -270,9 +271,11 @@ export function EditUserForm({ user }: EditUserFormProps) {
                   </SelectContent>
                 </Select>
               </div>
+            )}
 
+            {selectedRole === "CELL_LEADER" && (
               <div className="space-y-2">
-                <Label htmlFor="cellId">Cell (for Cell Leader)</Label>
+                <Label htmlFor="cellId">Cell</Label>
                 <Select name="cellId" defaultValue={currentRole?.cellId || ""} disabled={loadingNetworks}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select cell" />
@@ -287,7 +290,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            )}
           </div>
 
           {message && (
