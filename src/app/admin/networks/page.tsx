@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Users, Building, Settings, Plus } from "lucide-react"
 import Link from "next/link"
 import { db } from "@/lib/db"
-import { networks, cells, cellMemberships, profiles, userRoles, users, memberships } from "@/lib/db/schema"
+import { networks, cells, users } from "@/lib/db/schema"
 import { count, eq, and } from "drizzle-orm"
 
 export default async function AdminNetworksPage() {
@@ -29,23 +29,16 @@ export default async function AdminNetworksPage() {
       description: networks.description,
       createdAt: networks.createdAt,
       cellCount: count(cells.id),
-      memberCount: count(memberships.id),
-      networkLeaderId: userRoles.userId,
-      networkLeaderName: profiles.fullName,
+      memberCount: count(users.id),
+      networkLeaderName: users.fullName,
     })
     .from(networks)
     .leftJoin(cells, eq(networks.id, cells.networkId))
-    .leftJoin(memberships, and(
-      eq(memberships.networkId, networks.id),
-      eq(memberships.status, "ACTIVE")
+    .leftJoin(users, and(
+      eq(users.networkId, networks.id),
+      eq(users.isActive, true)
     ))
-    .leftJoin(userRoles, and(
-      eq(userRoles.role, "NETWORK_LEADER"),
-      eq(userRoles.networkId, networks.id)
-    ))
-    .leftJoin(users, eq(userRoles.userId, users.id))
-    .leftJoin(profiles, eq(users.id, profiles.userId))
-    .groupBy(networks.id, userRoles.userId, profiles.fullName)
+    .groupBy(networks.id, users.fullName)
     .orderBy(networks.name)
 
   return (

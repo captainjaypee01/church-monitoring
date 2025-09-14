@@ -6,8 +6,8 @@ export default auth((req) => {
   const token = req.auth
   const { pathname } = req.nextUrl
 
-  // Allow access to public routes
-  if (pathname === "/" || pathname === "/login") {
+  // Allow access to public routes and API routes
+  if (pathname === "/" || pathname === "/login" || pathname === "/test" || pathname.startsWith("/api/")) {
     // Redirect to dashboard if authenticated user tries to access login
     if (token && pathname === "/login") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
@@ -22,11 +22,10 @@ export default auth((req) => {
 
   // Role-based route protection
   if (token) {
-    const userRoles = (token as any).roles as Array<{ role: string; networkId?: string; cellId?: string }> || []
-    const hasRole = (role: string) => userRoles.some(r => r.role === role)
-    const isAdmin = hasRole("ADMIN")
-    const isNetworkLeader = hasRole("NETWORK_LEADER")
-    const isCellLeader = hasRole("CELL_LEADER")
+    const userData = (token as any).userData as { role: string; isNetworkLeader: boolean; isCellLeader: boolean } || {}
+    const isAdmin = userData.role === "ADMIN"
+    const isNetworkLeader = userData.role === "NETWORK_LEADER" || userData.isNetworkLeader
+    const isCellLeader = userData.role === "CELL_LEADER" || userData.isCellLeader
 
     // Admin-only routes
     if (pathname.startsWith("/admin") && !isAdmin) {
@@ -51,12 +50,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api/auth (auth API routes)
+     * - api (all API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public folder)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)",
   ],
 }

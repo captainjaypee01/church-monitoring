@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { EditUserForm } from "@/components/users/edit-user-form"
 import { db } from "@/lib/db"
-import { users, profiles, userRoles, networks, cells } from "@/lib/db/schema"
+import { users, networks, cells } from "@/lib/db/schema"
 import { eq, and, isNull } from "drizzle-orm"
 import { Users, Mail, Phone, Calendar, MapPin, Shield, Trash2, RotateCcw } from "lucide-react"
 import Link from "next/link"
@@ -28,7 +28,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     redirect("/dashboard")
   }
 
-  // Fetch user details with profile
+  // Fetch user details with simplified schema
   const [userData] = await db
     .select({
       id: users.id,
@@ -40,18 +40,21 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       deletedAt: users.deletedAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
-      firstName: profiles.firstName,
-      lastName: profiles.lastName,
-      fullName: profiles.fullName,
-      birthdate: profiles.birthdate,
-      gender: profiles.gender,
-      address: profiles.address,
-      joinedAt: profiles.joinedAt,
-      isActive: profiles.isActive,
-      profileDeletedAt: profiles.deletedAt,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      fullName: users.fullName,
+      birthdate: users.birthdate,
+      gender: users.gender,
+      address: users.address,
+      joinedAt: users.joinedAt,
+      isActive: users.isActive,
+      role: users.role,
+      networkId: users.networkId,
+      cellId: users.cellId,
+      isNetworkLeader: users.isNetworkLeader,
+      isCellLeader: users.isCellLeader,
     })
     .from(users)
-    .leftJoin(profiles, eq(users.id, profiles.userId))
     .where(eq(users.id, id))
     .limit(1)
 
@@ -59,21 +62,27 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     notFound()
   }
 
-  // Get user roles with network and cell names
-  const userRolesData = await db
-    .select({
-      id: userRoles.id,
-      role: userRoles.role,
-      networkId: userRoles.networkId,
-      cellId: userRoles.cellId,
-      createdAt: userRoles.createdAt,
-      networkName: networks.name,
-      cellName: cells.name,
-    })
-    .from(userRoles)
-    .leftJoin(networks, eq(userRoles.networkId, networks.id))
-    .leftJoin(cells, eq(userRoles.cellId, cells.id))
-    .where(eq(userRoles.userId, id))
+  // Get network and cell names if assigned
+  let networkName = null
+  let cellName = null
+
+  if (userData.networkId) {
+    const [network] = await db
+      .select({ name: networks.name })
+      .from(networks)
+      .where(eq(networks.id, userData.networkId))
+      .limit(1)
+    networkName = network?.name || null
+  }
+
+  if (userData.cellId) {
+    const [cell] = await db
+      .select({ name: cells.name })
+      .from(cells)
+      .where(eq(cells.id, userData.cellId))
+      .limit(1)
+    cellName = cell?.name || null
+  }
 
   const isDeleted = userData.deletedAt !== null
   const isCurrentUser = session.user.id === id
@@ -210,44 +219,70 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         </Card>
       </div>
 
-      {/* User Roles */}
+      {/* User Roles & Assignments */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Shield className="h-5 w-5" />
-            <span>User Roles</span>
+            <span>User Role & Assignments</span>
           </CardTitle>
           <CardDescription>
-            Current role assignments for this user
+            Current role and leadership assignments for this user
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {userRolesData.length > 0 ? (
-            <div className="space-y-2">
-              {userRolesData.map((role) => (
-                <div key={role.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <Badge variant="outline">{role.role}</Badge>
-                    {role.networkName && (
-                      <span className="text-sm text-muted-foreground ml-2">
-                        Network: {role.networkName}
-                      </span>
-                    )}
-                    {role.cellName && (
-                      <span className="text-sm text-muted-foreground ml-2">
-                        Cell: {role.cellName}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(role.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
+          <div className="space-y-4">
+            {/* Primary Role */}
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <Badge variant="outline">{userData.role}</Badge>
+                <span className="text-sm text-muted-foreground ml-2">
+                  Primary Role
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {new Date(userData.createdAt).toLocaleDateString()}
+              </span>
             </div>
-          ) : (
-            <p className="text-muted-foreground">No roles assigned</p>
-          )}
+
+            {/* Network Assignment */}
+            {userData.networkId && (
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <Badge variant="secondary">Network Member</Badge>
+                  {userData.isNetworkLeader && (
+                    <Badge variant="default" className="ml-2">Network Leader</Badge>
+                  )}
+                  {networkName && (
+                    <span className="text-sm text-muted-foreground ml-2">
+                      Network: {networkName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Cell Assignment */}
+            {userData.cellId && (
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <Badge variant="secondary">Cell Member</Badge>
+                  {userData.isCellLeader && (
+                    <Badge variant="default" className="ml-2">Cell Leader</Badge>
+                  )}
+                  {cellName && (
+                    <span className="text-sm text-muted-foreground ml-2">
+                      Cell: {cellName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!userData.networkId && !userData.cellId && (
+              <p className="text-muted-foreground">No network or cell assignments</p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -266,11 +301,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           birthdate: userData.birthdate as string | null,
           address: userData.address,
           isActive: userData.isActive,
-          roles: userRolesData.map(role => ({
-            role: role.role,
-            networkId: role.networkId,
-            cellId: role.cellId
-          }))
+          role: userData.role,
+          networkId: userData.networkId,
+          cellId: userData.cellId,
+          isNetworkLeader: userData.isNetworkLeader,
+          isCellLeader: userData.isCellLeader,
         }} />
       )}
     </div>

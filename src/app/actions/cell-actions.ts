@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { cells, userRoles, memberships, profiles } from "@/lib/db/schema"
+import { cells, users } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -12,12 +12,10 @@ const cellDataSchema = z.object({
   name: z.string().min(1, "Cell name is required"),
   description: z.string().optional(),
   networkId: z.string().min(1, "Network ID is required"),
-  cellLeader: z.string().optional().refine((val) => {
-    if (!val || val === "none" || val === "") return true
-    // Check if it's a valid UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    return uuidRegex.test(val)
-  }, "Invalid user ID format"),
+  createdBy: z.string().min(1, "Creator ID is required"),
+  meetingDay: z.string().optional(),
+  meetingTime: z.string().optional(),
+  cellLeaders: z.array(z.string()).optional(),
 })
 
 export async function createCellAction(formData: FormData) {
@@ -31,19 +29,12 @@ export async function createCellAction(formData: FormData) {
     // Parse form data
     const data = {
       name: formData.get("name") as string,
-      description: formData.get("description") as string || "",
+      description: formData.get("description") as string,
       networkId: formData.get("networkId") as string,
-      cellLeader: formData.get("cellLeader") as string || "",
-    }
-
-    console.log("Cell creation data:", data)
-
-    // Check for required fields
-    if (!data.name) {
-      return { success: false, error: "Cell name is required" }
-    }
-    if (!data.networkId) {
-      return { success: false, error: "Network ID is required" }
+      createdBy: session.user.id,
+      meetingDay: formData.get("meetingDay") as string,
+      meetingTime: formData.get("meetingTime") as string,
+      cellLeaders: formData.getAll("cellLeaders") as string[],
     }
 
     // Validate data
@@ -56,44 +47,28 @@ export async function createCellAction(formData: FormData) {
         name: validatedData.name,
         description: validatedData.description || null,
         networkId: validatedData.networkId,
-        createdBy: session.user.id!,
+        createdBy: validatedData.createdBy,
+        meetingDay: validatedData.meetingDay || null,
+        meetingTime: validatedData.meetingTime || null,
       })
       .returning()
 
-    // Assign cell leader if specified
-    if (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") {
-      console.log("Assigning cell leader:", validatedData.cellLeader, "to cell:", newCell.id)
+    // Assign cell leaders using simplified schema
+    if (validatedData.cellLeaders && validatedData.cellLeaders.length > 0) {
+      const leaderIds = validatedData.cellLeaders.filter(id => id && id.trim() !== "")
       
-      // Handle existing CELL_LEADER roles for this user
-      const existingRoles = await db
-        .select()
-        .from(userRoles)
-        .where(and(
-          eq(userRoles.userId, validatedData.cellLeader),
-          eq(userRoles.role, "CELL_LEADER")
-        ))
-
-      if (existingRoles.length > 0) {
-        // Delete all existing CELL_LEADER roles for this user
-        await db.delete(userRoles)
-          .where(and(
-            eq(userRoles.userId, validatedData.cellLeader),
-            eq(userRoles.role, "CELL_LEADER")
-          ))
-        
-        console.log(`Cleaned up ${existingRoles.length} existing CELL_LEADER roles for user`)
+      for (const leaderId of leaderIds) {
+        // Update user to be a cell leader and assign to this cell
+        await db
+          .update(users)
+          .set({
+            role: "CELL_LEADER",
+            cellId: newCell.id,
+            isCellLeader: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, leaderId))
       }
-
-      // Create a single new role with cell assignment
-      await db.insert(userRoles).values({
-        userId: validatedData.cellLeader,
-        role: "CELL_LEADER",
-        networkId: validatedData.networkId,
-        cellId: newCell.id,
-      })
-      console.log("Cell leader assigned successfully")
-    } else {
-      console.log("No cell leader assigned (value:", validatedData.cellLeader, ")")
     }
 
     revalidatePath("/admin/networks")
@@ -103,7 +78,7 @@ export async function createCellAction(formData: FormData) {
     console.error("Cell creation error:", error)
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Failed to create cell" 
+      error: error instanceof Error ? error.message : "Failed to create cell group" 
     }
   }
 }
@@ -116,23 +91,18 @@ export async function updateCellAction(cellId: string, formData: FormData) {
       return { success: false, error: "Unauthorized" }
     }
 
+    // Parse form data
     const data = {
       name: formData.get("name") as string,
-      description: formData.get("description") as string || "",
+      description: formData.get("description") as string,
       networkId: formData.get("networkId") as string,
-      cellLeader: formData.get("cellLeader") as string || "",
+      createdBy: session.user.id,
+      meetingDay: formData.get("meetingDay") as string,
+      meetingTime: formData.get("meetingTime") as string,
+      cellLeaders: formData.getAll("cellLeaders") as string[],
     }
 
-    console.log("Cell update data:", data)
-
-    // Check for required fields
-    if (!data.name) {
-      return { success: false, error: "Cell name is required" }
-    }
-    if (!data.networkId) {
-      return { success: false, error: "Network ID is required" }
-    }
-
+    // Validate data
     const validatedData = cellDataSchema.parse(data)
 
     // Update cell
@@ -141,84 +111,40 @@ export async function updateCellAction(cellId: string, formData: FormData) {
       .set({
         name: validatedData.name,
         description: validatedData.description || null,
+        meetingDay: validatedData.meetingDay || null,
+        meetingTime: validatedData.meetingTime || null,
         updatedAt: new Date(),
       })
       .where(eq(cells.id, cellId))
 
-    // Handle cell leader assignment (support multiple leaders)
-    console.log("Processing cell leader assignment:", validatedData.cellLeader)
-    if (validatedData.cellLeader && validatedData.cellLeader !== "none" && validatedData.cellLeader !== "") {
-      console.log("Adding cell leader:", validatedData.cellLeader, "to cell:", cellId)
+    // Update cell leadership assignments
+    // First, remove cell leadership from all users for this cell
+    await db
+      .update(users)
+      .set({
+        isCellLeader: false,
+        cellId: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(users.cellId, cellId),
+        eq(users.isCellLeader, true)
+      ))
+
+    // Then assign new cell leaders
+    if (validatedData.cellLeaders && validatedData.cellLeaders.length > 0) {
+      const leaderIds = validatedData.cellLeaders.filter(id => id && id.trim() !== "")
       
-      // Check if this user is already a leader of this cell
-      const existingLeadership = await db
-        .select()
-        .from(userRoles)
-        .where(and(
-          eq(userRoles.userId, validatedData.cellLeader),
-          eq(userRoles.role, "CELL_LEADER"),
-          eq(userRoles.cellId, cellId)
-        ))
-        .limit(1)
-
-      if (existingLeadership.length === 0) {
-        // Handle existing CELL_LEADER roles for this user
-        const existingRoles = await db
-          .select()
-          .from(userRoles)
-          .where(and(
-            eq(userRoles.userId, validatedData.cellLeader),
-            eq(userRoles.role, "CELL_LEADER")
-          ))
-
-        if (existingRoles.length > 0) {
-          // Delete all existing CELL_LEADER roles for this user
-          await db.delete(userRoles)
-            .where(and(
-              eq(userRoles.userId, validatedData.cellLeader),
-              eq(userRoles.role, "CELL_LEADER")
-            ))
-          
-          console.log(`Cleaned up ${existingRoles.length} existing CELL_LEADER roles for user`)
-        }
-
-        // Create a single new role with cell assignment
-        await db.insert(userRoles).values({
-          userId: validatedData.cellLeader,
-          role: "CELL_LEADER",
-          networkId: validatedData.networkId,
-          cellId: cellId,
-        })
-
-        // Also create/update membership record with leadership flag
-        const [userProfile] = await db
-          .select({ id: profiles.id })
-          .from(profiles)
-          .where(eq(profiles.userId, validatedData.cellLeader))
-          .limit(1)
-
-        if (userProfile) {
-          // Remove any existing regular membership for this cell
-          await db.delete(memberships).where(and(
-            eq(memberships.profileId, userProfile.id),
-            eq(memberships.cellId, cellId)
-          ))
-
-          // Create new membership with leadership
-          await db.insert(memberships).values({
-            profileId: userProfile.id,
-            networkId: validatedData.networkId,
+      for (const leaderId of leaderIds) {
+        await db
+          .update(users)
+          .set({
+            role: "CELL_LEADER",
             cellId: cellId,
-            membershipType: "LEADER",
-            leadershipScope: "CELL",
-            status: "ACTIVE",
-            joinedAt: new Date(),
+            isCellLeader: true,
+            updatedAt: new Date(),
           })
-        }
-        
-        console.log("Cell leader added successfully")
-      } else {
-        console.log("User is already a leader of this cell")
+          .where(eq(users.id, leaderId))
       }
     }
 
@@ -230,7 +156,7 @@ export async function updateCellAction(cellId: string, formData: FormData) {
     console.error("Cell update error:", error)
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Failed to update cell" 
+      error: error instanceof Error ? error.message : "Failed to update cell group" 
     }
   }
 }
@@ -251,21 +177,24 @@ export async function deleteCellAction(cellId: string) {
       .limit(1)
 
     if (!cell) {
-      return { success: false, error: "Cell not found" }
+      return { success: false, error: "Cell group not found" }
     }
 
-    // Remove cell leader roles
+    // Remove cell leadership assignments
     await db
-      .delete(userRoles)
+      .update(users)
+      .set({
+        isCellLeader: false,
+        cellId: null,
+        updatedAt: new Date(),
+      })
       .where(and(
-        eq(userRoles.role, "CELL_LEADER"),
-        eq(userRoles.cellId, cellId)
+        eq(users.cellId, cellId),
+        eq(users.isCellLeader, true)
       ))
 
     // Delete cell
-    await db
-      .delete(cells)
-      .where(eq(cells.id, cellId))
+    await db.delete(cells).where(eq(cells.id, cellId))
 
     revalidatePath("/admin/networks")
     revalidatePath(`/admin/networks/${cell.networkId}`)
@@ -274,7 +203,52 @@ export async function deleteCellAction(cellId: string) {
     console.error("Cell deletion error:", error)
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Failed to delete cell" 
+      error: error instanceof Error ? error.message : "Failed to delete cell group" 
+    }
+  }
+}
+
+export async function removeCellLeaderAction(cellId: string, userId: string) {
+  try {
+    const session = await auth()
+    
+    if (!session?.user || !isAdmin(session)) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    // Remove cell leadership from user
+    await db
+      .update(users)
+      .set({
+        isCellLeader: false,
+        cellId: null,
+        role: "MEMBER", // Reset to member role
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(users.id, userId),
+        eq(users.cellId, cellId)
+      ))
+
+    // Get cell network ID for revalidation
+    const [cell] = await db
+      .select({ networkId: cells.networkId })
+      .from(cells)
+      .where(eq(cells.id, cellId))
+      .limit(1)
+
+    if (cell) {
+      revalidatePath("/admin/networks")
+      revalidatePath(`/admin/networks/${cell.networkId}`)
+      revalidatePath(`/admin/networks/${cell.networkId}/cells/${cellId}`)
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("Remove cell leader error:", error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to remove cell leader" 
     }
   }
 }

@@ -27,11 +27,11 @@ interface EditUserFormProps {
     birthdate: string | null
     address: string | null
     isActive: boolean | null
-    roles: Array<{
-      role: string
-      networkId: string | null
-      cellId: string | null
-    }>
+    role: string
+    networkId: string | null
+    cellId: string | null
+    isNetworkLeader: boolean
+    isCellLeader: boolean
   }
 }
 
@@ -40,8 +40,9 @@ export function EditUserForm({ user }: EditUserFormProps) {
   const [networks, setNetworks] = useState<any[]>([])
   const [cells, setCells] = useState<any[]>([])
   const [loadingNetworks, setLoadingNetworks] = useState(false)
-  const [selectedRole, setSelectedRole] = useState<string>(user.roles[0]?.role || "")
-  const [selectedNetwork, setSelectedNetwork] = useState<string>("none")
+  const [selectedRole, setSelectedRole] = useState<string>(user.role || "")
+  const [selectedNetwork, setSelectedNetwork] = useState<string>(user.networkId || "none")
+  const [selectedCell, setSelectedCell] = useState<string>(user.cellId || "none")
   const router = useRouter()
 
   useEffect(() => {
@@ -75,8 +76,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
 
   // No role-based restrictions - users can be assigned to any network/cell regardless of role
 
-  // Get current user role
-  const currentRole = user.roles.length > 0 ? user.roles[0] : null
+  // No role-based restrictions - users can be assigned to any network/cell regardless of role
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true)
@@ -282,7 +282,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
               {selectedNetwork && selectedNetwork !== "none" && (
                 <div className="space-y-2">
                   <Label htmlFor="cellId">Member of Cell Group</Label>
-                  <Select name="cellId" disabled={loadingNetworks}>
+                  <Select name="cellId" value={selectedCell} onValueChange={setSelectedCell} disabled={loadingNetworks}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select cell group (optional)" />
                     </SelectTrigger>

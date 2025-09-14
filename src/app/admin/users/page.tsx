@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { db } from "@/lib/db"
-import { users, profiles, userRoles, roles } from "@/lib/db/schema"
+import { users } from "@/lib/db/schema"
 import { eq, count } from "drizzle-orm"
 import { Users, UserCheck, Settings, Mail } from "lucide-react"
 import Link from "next/link"
@@ -21,42 +21,27 @@ export default async function AdminUsersPage() {
     redirect("/dashboard")
   }
 
-  // Fetch all users with their profiles
-  const usersData = await db
+  // Fetch all users with simplified schema
+  const usersWithRoles = await db
     .select({
       id: users.id,
       email: users.email,
       username: users.username,
       name: users.name,
-      firstName: profiles.firstName,
-      lastName: profiles.lastName,
-      fullName: profiles.fullName,
-      isActive: profiles.isActive,
-      joinedAt: profiles.joinedAt,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      fullName: users.fullName,
+      isActive: users.isActive,
+      joinedAt: users.joinedAt,
       deletedAt: users.deletedAt,
+      role: users.role,
+      networkId: users.networkId,
+      cellId: users.cellId,
+      isNetworkLeader: users.isNetworkLeader,
+      isCellLeader: users.isCellLeader,
     })
     .from(users)
-    .leftJoin(profiles, eq(users.id, profiles.userId))
     .orderBy(users.email)
-
-  // Fetch roles for each user
-  const usersWithRoles = await Promise.all(
-    usersData.map(async (user) => {
-      const roles = await db
-        .select({
-          role: userRoles.role,
-          networkId: userRoles.networkId,
-          cellId: userRoles.cellId,
-        })
-        .from(userRoles)
-        .where(eq(userRoles.userId, user.id))
-
-      return {
-        ...user,
-        roles,
-      }
-    })
-  )
 
   return (
     <div className="space-y-6">
@@ -167,13 +152,21 @@ export default async function AdminUsersPage() {
                       <Badge variant={user.deletedAt ? "destructive" : user.isActive ? "default" : "secondary"}>
                         {user.deletedAt ? "Deleted" : user.isActive ? "Active" : "Inactive"}
                       </Badge>
-                      {user.roles.length > 0 && !user.deletedAt && (
+                      {user.role && !user.deletedAt && (
                         <div className="flex space-x-1">
-                          {Array.from(new Set(user.roles.map(role => role.role))).map((roleType, index) => (
-                            <Badge key={index} variant="outline">
-                              {roleType.replace(/_/g, ' ')}
+                          <Badge variant="outline">
+                            {user.role.replace(/_/g, ' ')}
+                          </Badge>
+                          {user.isNetworkLeader && (
+                            <Badge variant="secondary">
+                              Network Leader
                             </Badge>
-                          ))}
+                          )}
+                          {user.isCellLeader && (
+                            <Badge variant="secondary">
+                              Cell Leader
+                            </Badge>
+                          )}
                         </div>
                       )}
                     </div>

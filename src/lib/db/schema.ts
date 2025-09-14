@@ -18,10 +18,7 @@ import {
 // Enums
 export const roleEnum = pgEnum("role", ["ADMIN", "NETWORK_LEADER", "CELL_LEADER", "MEMBER"])
 export const genderEnum = pgEnum("gender", ["MALE", "FEMALE", "OTHER"])
-export const cellRoleEnum = pgEnum("cell_role", ["MEMBER", "ASSISTANT", "LEADER"])
-export const membershipTypeEnum = pgEnum("membership_type", ["MEMBER", "LEADER"])
-export const leadershipScopeEnum = pgEnum("leadership_scope", ["CELL", "NETWORK", "NONE"])
-export const membershipStatusEnum = pgEnum("membership_status", ["ACTIVE", "INACTIVE", "SUSPENDED"])
+// Removed obsolete enums: cellRoleEnum, membershipTypeEnum, leadershipScopeEnum, membershipStatusEnum
 export const registrationStatusEnum = pgEnum("registration_status", ["REGISTERED", "WAITLISTED", "CANCELLED"])
 export const audienceEnum = pgEnum("audience", ["ALL", "LEADERS", "MEMBERS"])
 export const actionEnum = pgEnum("action", [
@@ -38,7 +35,7 @@ export const actionEnum = pgEnum("action", [
   "ANNOUNCEMENT_PUBLISHED"
 ])
 
-// Users table
+// Simplified users table with all fields merged
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: varchar("email", { length: 255 }),
@@ -47,6 +44,27 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 50 }),
   avatarUrl: text("avatar_url"),
+  
+  // Profile fields (merged from profiles table)
+  firstName: varchar("first_name", { length: 255 }),
+  lastName: varchar("last_name", { length: 255 }),
+  fullName: varchar("full_name", { length: 255 }),
+  birthdate: date("birthdate"),
+  gender: genderEnum("gender"),
+  address: text("address"),
+  
+  // Role & Assignment fields (merged from user_roles & memberships)
+  role: roleEnum("role").default("MEMBER").notNull(),
+  networkId: uuid("network_id").references(() => networks.id, { onDelete: "set null" }),
+  cellId: uuid("cell_id").references(() => cells.id, { onDelete: "set null" }),
+  
+  // Leadership flags
+  isNetworkLeader: boolean("is_network_leader").default(false).notNull(),
+  isCellLeader: boolean("is_cell_leader").default(false).notNull(),
+  
+  // Status fields
+  isActive: boolean("is_active").default(true).notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -54,23 +72,6 @@ export const users = pgTable("users", {
   emailUnique: unique().on(table.email),
   usernameUnique: unique().on(table.username),
 }))
-
-// Profiles table (member profile)
-export const profiles = pgTable("profiles", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-  firstName: varchar("first_name", { length: 255 }),
-  lastName: varchar("last_name", { length: 255 }),
-  fullName: varchar("full_name", { length: 255 }).notNull(), // Keep for backward compatibility
-  birthdate: date("birthdate"),
-  gender: genderEnum("gender"),
-  address: text("address"),
-  joinedAt: timestamp("joined_at").defaultNow().notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
-  deletedAt: timestamp("deleted_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
 
 // Networks table
 export const networks = pgTable("networks", {
@@ -83,50 +84,15 @@ export const networks = pgTable("networks", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-// Cells table
+// Simplified cells table
 export const cells = pgTable("cells", {
   id: uuid("id").defaultRandom().primaryKey(),
   networkId: uuid("network_id").references(() => networks.id, { onDelete: "cascade" }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  leaderId: uuid("leader_id").references(() => profiles.id),
   createdBy: uuid("created_by").references(() => users.id),
   meetingDay: varchar("meeting_day", { length: 50 }),
   meetingTime: time("meeting_time"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
-
-// User roles table
-export const userRoles = pgTable("user_roles", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  role: roleEnum("role").notNull(),
-  networkId: uuid("network_id").references(() => networks.id, { onDelete: "cascade" }),
-  cellId: uuid("cell_id").references(() => cells.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-})
-
-// Cell memberships table (legacy - will be replaced by memberships)
-export const cellMemberships = pgTable("cell_memberships", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  cellId: uuid("cell_id").references(() => cells.id, { onDelete: "cascade" }).notNull(),
-  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
-  roleInCell: cellRoleEnum("role_in_cell").default("MEMBER").notNull(),
-  joinedAt: timestamp("joined_at").defaultNow().notNull(),
-  active: boolean("active").default(true).notNull(),
-})
-
-// New unified memberships table
-export const memberships = pgTable("memberships", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
-  networkId: uuid("network_id").references(() => networks.id, { onDelete: "cascade" }),
-  cellId: uuid("cell_id").references(() => cells.id, { onDelete: "cascade" }),
-  membershipType: membershipTypeEnum("membership_type").default("MEMBER").notNull(),
-  leadershipScope: leadershipScopeEnum("leadership_scope").default("NONE").notNull(),
-  status: membershipStatusEnum("status").default("ACTIVE").notNull(),
-  joinedAt: timestamp("joined_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -143,7 +109,7 @@ export const trainingLevels = pgTable("training_levels", {
 // Training progress table
 export const trainingProgress = pgTable("training_progress", {
   id: uuid("id").defaultRandom().primaryKey(),
-  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   levelId: uuid("level_id").references(() => trainingLevels.id, { onDelete: "cascade" }).notNull(),
   completedAt: timestamp("completed_at").defaultNow().notNull(),
   notes: text("notes"),
@@ -164,7 +130,7 @@ export const meetings = pgTable("meetings", {
 export const meetingAttendance = pgTable("meeting_attendance", {
   id: uuid("id").defaultRandom().primaryKey(),
   meetingId: uuid("meeting_id").references(() => meetings.id, { onDelete: "cascade" }).notNull(),
-  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   isVip: boolean("is_vip").default(false).notNull(),
   present: boolean("present").default(true).notNull(),
   remarks: text("remarks"),
@@ -191,7 +157,7 @@ export const services = pgTable("services", {
 export const serviceAttendance = pgTable("service_attendance", {
   id: uuid("id").defaultRandom().primaryKey(),
   serviceId: uuid("service_id").references(() => services.id, { onDelete: "cascade" }).notNull(),
-  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   isVip: boolean("is_vip").default(false).notNull(),
   present: boolean("present").default(true).notNull(),
 })
@@ -216,7 +182,7 @@ export const events = pgTable("events", {
 export const eventRegistrations = pgTable("event_registrations", {
   id: uuid("id").defaultRandom().primaryKey(),
   eventId: uuid("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
-  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   status: registrationStatusEnum("status").default("REGISTERED").notNull(),
   registeredAt: timestamp("registered_at").defaultNow().notNull(),
 })
@@ -246,7 +212,7 @@ export const volunteerAssignments = pgTable("volunteer_assignments", {
   id: uuid("id").defaultRandom().primaryKey(),
   eventId: uuid("event_id").references(() => events.id, { onDelete: "cascade" }),
   serviceId: uuid("service_id").references(() => services.id, { onDelete: "cascade" }),
-  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   volunteerRoleId: uuid("volunteer_role_id").references(() => volunteerRoles.id, { onDelete: "cascade" }).notNull(),
   scheduledAt: timestamp("scheduled_at").notNull(),
   notes: text("notes"),
@@ -293,8 +259,13 @@ export const verificationTokens = pgTable("verificationTokens", {
 
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
-  profile: one(profiles, { fields: [users.id], references: [profiles.userId] }),
-  roles: many(userRoles),
+  network: one(networks, { fields: [users.networkId], references: [networks.id] }),
+  cell: one(cells, { fields: [users.cellId], references: [cells.id] }),
+  trainingProgress: many(trainingProgress),
+  meetingAttendance: many(meetingAttendance),
+  serviceAttendance: many(serviceAttendance),
+  eventRegistrations: many(eventRegistrations),
+  volunteerAssignments: many(volunteerAssignments),
   meetingsLed: many(meetings),
   eventsCreated: many(events),
   announcements: many(announcements),
@@ -303,37 +274,15 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
 }))
 
-export const profilesRelations = relations(profiles, ({ one, many }) => ({
-  user: one(users, { fields: [profiles.userId], references: [users.id] }),
-  cellMemberships: many(cellMemberships),
-  trainingProgress: many(trainingProgress),
-  meetingAttendance: many(meetingAttendance),
-  serviceAttendance: many(serviceAttendance),
-  eventRegistrations: many(eventRegistrations),
-  volunteerAssignments: many(volunteerAssignments),
-}))
-
 export const networksRelations = relations(networks, ({ many }) => ({
   cells: many(cells),
-  userRoles: many(userRoles),
+  users: many(users),
 }))
 
 export const cellsRelations = relations(cells, ({ one, many }) => ({
   network: one(networks, { fields: [cells.networkId], references: [networks.id] }),
-  memberships: many(cellMemberships),
+  users: many(users),
   meetings: many(meetings),
-  userRoles: many(userRoles),
-}))
-
-export const userRolesRelations = relations(userRoles, ({ one }) => ({
-  user: one(users, { fields: [userRoles.userId], references: [users.id] }),
-  network: one(networks, { fields: [userRoles.networkId], references: [networks.id] }),
-  cell: one(cells, { fields: [userRoles.cellId], references: [cells.id] }),
-}))
-
-export const cellMembershipsRelations = relations(cellMemberships, ({ one }) => ({
-  cell: one(cells, { fields: [cellMemberships.cellId], references: [cells.id] }),
-  profile: one(profiles, { fields: [cellMemberships.profileId], references: [profiles.id] }),
 }))
 
 export const trainingLevelsRelations = relations(trainingLevels, ({ many }) => ({
@@ -341,7 +290,7 @@ export const trainingLevelsRelations = relations(trainingLevels, ({ many }) => (
 }))
 
 export const trainingProgressRelations = relations(trainingProgress, ({ one }) => ({
-  profile: one(profiles, { fields: [trainingProgress.profileId], references: [profiles.id] }),
+  user: one(users, { fields: [trainingProgress.userId], references: [users.id] }),
   level: one(trainingLevels, { fields: [trainingProgress.levelId], references: [trainingLevels.id] }),
 }))
 
@@ -354,7 +303,7 @@ export const meetingsRelations = relations(meetings, ({ one, many }) => ({
 
 export const meetingAttendanceRelations = relations(meetingAttendance, ({ one }) => ({
   meeting: one(meetings, { fields: [meetingAttendance.meetingId], references: [meetings.id] }),
-  profile: one(profiles, { fields: [meetingAttendance.profileId], references: [profiles.id] }),
+  user: one(users, { fields: [meetingAttendance.userId], references: [users.id] }),
 }))
 
 export const givingRelations = relations(giving, ({ one }) => ({
@@ -368,7 +317,7 @@ export const servicesRelations = relations(services, ({ many }) => ({
 
 export const serviceAttendanceRelations = relations(serviceAttendance, ({ one }) => ({
   service: one(services, { fields: [serviceAttendance.serviceId], references: [services.id] }),
-  profile: one(profiles, { fields: [serviceAttendance.profileId], references: [profiles.id] }),
+  user: one(users, { fields: [serviceAttendance.userId], references: [users.id] }),
 }))
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -379,7 +328,7 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
 
 export const eventRegistrationsRelations = relations(eventRegistrations, ({ one }) => ({
   event: one(events, { fields: [eventRegistrations.eventId], references: [events.id] }),
-  profile: one(profiles, { fields: [eventRegistrations.profileId], references: [profiles.id] }),
+  user: one(users, { fields: [eventRegistrations.userId], references: [users.id] }),
 }))
 
 export const announcementsRelations = relations(announcements, ({ one }) => ({
@@ -393,7 +342,7 @@ export const volunteerRolesRelations = relations(volunteerRoles, ({ many }) => (
 export const volunteerAssignmentsRelations = relations(volunteerAssignments, ({ one }) => ({
   event: one(events, { fields: [volunteerAssignments.eventId], references: [events.id] }),
   service: one(services, { fields: [volunteerAssignments.serviceId], references: [services.id] }),
-  profile: one(profiles, { fields: [volunteerAssignments.profileId], references: [profiles.id] }),
+  user: one(users, { fields: [volunteerAssignments.userId], references: [users.id] }),
   role: one(volunteerRoles, { fields: [volunteerAssignments.volunteerRoleId], references: [volunteerRoles.id] }),
 }))
 
@@ -412,16 +361,10 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 // Export types
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
-export type Profile = typeof profiles.$inferSelect
-export type NewProfile = typeof profiles.$inferInsert
 export type Network = typeof networks.$inferSelect
 export type NewNetwork = typeof networks.$inferInsert
 export type Cell = typeof cells.$inferSelect
 export type NewCell = typeof cells.$inferInsert
-export type UserRole = typeof userRoles.$inferSelect
-export type NewUserRole = typeof userRoles.$inferInsert
-export type CellMembership = typeof cellMemberships.$inferSelect
-export type NewCellMembership = typeof cellMemberships.$inferInsert
 export type TrainingLevel = typeof trainingLevels.$inferSelect
 export type NewTrainingLevel = typeof trainingLevels.$inferInsert
 export type TrainingProgress = typeof trainingProgress.$inferSelect
@@ -448,5 +391,4 @@ export type VolunteerAssignment = typeof volunteerAssignments.$inferSelect
 export type NewVolunteerAssignment = typeof volunteerAssignments.$inferInsert
 export type AuditLog = typeof auditLogs.$inferSelect
 export type NewAuditLog = typeof auditLogs.$inferInsert
-export type Membership = typeof memberships.$inferSelect
-export type NewMembership = typeof memberships.$inferInsert
+// Removed obsolete types: Profile, NewProfile, UserRole, NewUserRole, CellMembership, NewCellMembership, Membership, NewMembership

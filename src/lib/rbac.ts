@@ -1,14 +1,6 @@
 import { Session } from "next-auth"
 
 export type Role = "ADMIN" | "NETWORK_LEADER" | "CELL_LEADER" | "MEMBER"
-export type UserRole = {
-  id: string
-  userId: string
-  role: Role
-  networkId: string | null
-  cellId: string | null
-  createdAt: Date
-}
 
 export type AbilityContext = {
   session: Session
@@ -25,19 +17,11 @@ export class RBACError extends Error {
 }
 
 export function hasRole(session: Session, role: Role): boolean {
-  return session.roles?.some((userRole) => userRole.role === role) || false
+  return session.userData?.role === role || false
 }
 
 export function hasAnyRole(session: Session, roles: Role[]): boolean {
-  return session.roles?.some((userRole) => roles.includes(userRole.role)) || false
-}
-
-export function getUserRoleInNetwork(session: Session, networkId: string): UserRole | null {
-  return session.roles?.find((role) => role.networkId === networkId) || null
-}
-
-export function getUserRoleInCell(session: Session, cellId: string): UserRole | null {
-  return session.roles?.find((role) => role.cellId === cellId) || null
+  return session.userData ? roles.includes(session.userData.role) : false
 }
 
 export function isAdmin(session: Session): boolean {
@@ -47,33 +31,33 @@ export function isAdmin(session: Session): boolean {
 export function isNetworkLeader(session: Session, networkId?: string): boolean {
   if (hasRole(session, "ADMIN")) return true
   
-  const networkRoles = session.roles?.filter((role) => role.role === "NETWORK_LEADER") || []
-  if (!networkId) return networkRoles.length > 0
+  if (!session.userData?.isNetworkLeader) return false
   
-  return networkRoles.some((role) => role.networkId === networkId)
+  if (!networkId) return true
+  
+  return session.userData.networkId === networkId
 }
 
 export function isCellLeader(session: Session, cellId?: string): boolean {
   if (hasRole(session, "ADMIN")) return true
   if (isNetworkLeader(session)) return true
   
-  const cellRoles = session.roles?.filter((role) => role.role === "CELL_LEADER") || []
-  if (!cellId) return cellRoles.length > 0
+  if (!session.userData?.isCellLeader) return false
   
-  return cellRoles.some((role) => role.cellId === cellId)
+  if (!cellId) return true
+  
+  return session.userData.cellId === cellId
 }
 
 // Leadership scope helpers
 export function getCellIdsForUser(session: Session): string[] {
-  return session.roles
-    ?.filter((role) => role.cellId)
-    .map((role) => role.cellId!) || []
+  if (!session.userData?.cellId) return []
+  return [session.userData.cellId]
 }
 
 export function getNetworkIdsForUser(session: Session): string[] {
-  return session.roles
-    ?.filter((role) => role.networkId)
-    .map((role) => role.networkId!) || []
+  if (!session.userData?.networkId) return []
+  return [session.userData.networkId]
 }
 
 // Ability checks

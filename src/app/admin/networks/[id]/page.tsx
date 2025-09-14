@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { EditNetworkForm } from "@/components/networks/edit-network-form"
 import { db } from "@/lib/db"
-import { networks, cells, cellMemberships, profiles, userRoles, users, memberships } from "@/lib/db/schema"
+import { networks, cells, users } from "@/lib/db/schema"
 import { eq, count, and } from "drizzle-orm"
 import { Building, Users, Settings, Trash2, Plus } from "lucide-react"
 import Link from "next/link"
@@ -42,15 +42,14 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
   const networkLeadersResult = await db
     .select({
       id: users.id,
-      fullName: profiles.fullName,
+      fullName: users.fullName,
       email: users.email,
     })
-    .from(userRoles)
-    .innerJoin(users, eq(userRoles.userId, users.id))
-    .innerJoin(profiles, eq(users.id, profiles.userId))
+    .from(users)
     .where(and(
-      eq(userRoles.role, "NETWORK_LEADER"),
-      eq(userRoles.networkId, id)
+      eq(users.networkId, id),
+      eq(users.isNetworkLeader, true),
+      eq(users.isActive, true)
     ))
 
   const networkLeaders = (networkLeadersResult || []).map(leader => ({
@@ -58,31 +57,31 @@ export default async function NetworkDetailPage({ params }: NetworkDetailPagePro
     email: leader.email || ""
   }))
 
-  // Get cells in this network
+  // Get cells in this network with their leaders and member counts
   const networkCells = await db
     .select({
       id: cells.id,
       name: cells.name,
       description: cells.description,
-      leaderName: profiles.fullName,
-      memberCount: count(memberships.id),
+      leaderName: users.fullName,
+      memberCount: count(users.id),
     })
     .from(cells)
-    .leftJoin(profiles, eq(cells.leaderId, profiles.id))
-    .leftJoin(memberships, and(
-      eq(memberships.cellId, cells.id),
-      eq(memberships.status, "ACTIVE")
+    .leftJoin(users, and(
+      eq(users.cellId, cells.id),
+      eq(users.isCellLeader, true),
+      eq(users.isActive, true)
     ))
     .where(eq(cells.networkId, id))
-    .groupBy(cells.id, profiles.fullName)
+    .groupBy(cells.id, users.fullName)
 
   // Get total members in network
   const totalMembersResult = await db
     .select({ count: count() })
-    .from(memberships)
+    .from(users)
     .where(and(
-      eq(memberships.networkId, id),
-      eq(memberships.status, "ACTIVE")
+      eq(users.networkId, id),
+      eq(users.isActive, true)
     ))
 
   const totalMembers = totalMembersResult[0] || { count: 0 }
