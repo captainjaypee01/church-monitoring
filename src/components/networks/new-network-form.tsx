@@ -26,7 +26,7 @@ export function NewNetworkForm({ currentUserId }: NewNetworkFormProps) {
   useEffect(() => {
     const fetchNetworkLeaders = async () => {
       try {
-        const response = await fetch('/api/users/network-leaders')
+        const response = await fetch('/api/users/network-leaders?excludeAssigned=true')
         if (response.ok) {
           const data = await response.json()
           const formattedLeaders = (data.users || []).map((user: any) => ({

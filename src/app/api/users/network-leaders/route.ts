@@ -2,10 +2,10 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { users, profiles, userRoles } from "@/lib/db/schema"
 import { isAdmin } from "@/lib/rbac"
-import { eq, and, isNull } from "drizzle-orm"
+import { eq, and, isNull, or } from "drizzle-orm"
 import { NextResponse } from "next/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await auth()
     
@@ -13,7 +13,33 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get users who have NETWORK_LEADER role (eligible for network leader assignment)
+    const { searchParams } = new URL(request.url)
+    const excludeAssigned = searchParams.get('excludeAssigned') === 'true'
+    const currentNetworkId = searchParams.get('currentNetworkId')
+
+    // Build where conditions based on request parameters
+    const whereConditions = [
+      isNull(users.deletedAt),
+      eq(profiles.isActive, true)
+    ]
+
+    if (excludeAssigned) {
+      if (currentNetworkId) {
+        // For edit mode: Show unassigned users OR users assigned to current network
+        const networkCondition = or(
+          isNull(userRoles.networkId),
+          eq(userRoles.networkId, currentNetworkId)
+        )
+        if (networkCondition) {
+          whereConditions.push(networkCondition)
+        }
+      } else {
+        // For new mode: Only show unassigned users
+        whereConditions.push(isNull(userRoles.networkId))
+      }
+    }
+
+    // Get users who have NETWORK_LEADER role
     const networkLeadersRaw = await db
       .select({
         id: users.id,
@@ -29,10 +55,7 @@ export async function GET() {
         eq(users.id, userRoles.userId),
         eq(userRoles.role, "NETWORK_LEADER")
       ))
-      .where(and(
-        isNull(users.deletedAt),
-        eq(profiles.isActive, true)
-      ))
+      .where(and(...whereConditions))
       .orderBy(users.email)
 
     // Deduplicate users by ID (in case they have multiple NETWORK_LEADER roles)

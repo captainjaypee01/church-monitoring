@@ -116,7 +116,7 @@ export function MultiSelect({
                 >
                   <Checkbox
                     checked={selected.includes(option.value)}
-                    onChange={() => handleSelect(option.value)}
+                    onCheckedChange={() => {}} // Controlled by parent div click
                   />
                   <div className="flex flex-col">
                     <span className="font-medium text-sm">{option.label}</span>
