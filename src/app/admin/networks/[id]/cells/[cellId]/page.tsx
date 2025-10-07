@@ -56,15 +56,13 @@ export default async function CellDetailPage({ params }: CellDetailPageProps) {
     const cellLeaderResult = await db
       .select({
         id: users.id,
-        fullName: profiles.fullName,
+        fullName: users.fullName,
         email: users.email,
       })
-      .from(userRoles)
-      .innerJoin(users, eq(userRoles.userId, users.id))
-      .innerJoin(profiles, eq(users.id, profiles.userId))
+      .from(users)
       .where(and(
-        eq(userRoles.role, "CELL_LEADER"),
-        eq(userRoles.cellId, cellId)
+        eq(users.cellId, cellId),
+        eq(users.isCellLeader, true)
       ))
       .limit(1) // For now, just get the first leader for display
 
@@ -74,75 +72,43 @@ export default async function CellDetailPage({ params }: CellDetailPageProps) {
     cellLeader = null
   }
 
-  // Get cell members from new memberships table with fallback to legacy cellMemberships
-  let cellMembers = []
+  // Get cell members from users table
+  let cellMembers: Array<{
+    id: string
+    fullName: string | null
+    email: string | null
+    roleInCell: string
+    joinedAt: Date | null
+  }> = []
   let memberCount = 0
 
   try {
-    // Try new memberships table first
-    const newMembersResult = await db
+    const cellMembersResult = await db
       .select({
-        id: profiles.id,
-        fullName: profiles.fullName,
+        id: users.id,
+        fullName: users.fullName,
         email: users.email,
-        roleInCell: memberships.membershipType, // Map membershipType to roleInCell
-        joinedAt: memberships.joinedAt,
+        roleInCell: users.role,
+        joinedAt: users.joinedAt,
       })
-      .from(memberships)
-      .innerJoin(profiles, eq(memberships.profileId, profiles.id))
-      .innerJoin(users, eq(profiles.userId, users.id))
+      .from(users)
       .where(and(
-        eq(memberships.cellId, cellId),
-        eq(memberships.status, "ACTIVE")
+        eq(users.cellId, cellId),
+        eq(users.isActive, true)
       ))
-      .orderBy(profiles.fullName)
+      .orderBy(users.fullName)
 
-    // Get member count from new memberships table
-    const newMemberCountResult = await db
-      .select({ count: count() })
-      .from(memberships)
+    // Get member count
+    const memberCountResult = await db
+      .select({ count: count(users.id) })
+      .from(users)
       .where(and(
-        eq(memberships.cellId, cellId),
-        eq(memberships.status, "ACTIVE")
+        eq(users.cellId, cellId),
+        eq(users.isActive, true)
       ))
 
-    if (newMembersResult && newMembersResult.length > 0) {
-      // Use new memberships data
-      cellMembers = newMembersResult.map(member => ({
-        ...member,
-        roleInCell: member.roleInCell === "LEADER" ? "LEADER" : "MEMBER" // Convert to legacy format
-      }))
-      memberCount = (newMemberCountResult && newMemberCountResult[0]?.count) || 0
-    } else {
-      // Fallback to legacy cellMemberships table
-      const legacyMembersResult = await db
-        .select({
-          id: profiles.id,
-          fullName: profiles.fullName,
-          email: users.email,
-          roleInCell: cellMemberships.roleInCell,
-          joinedAt: cellMemberships.joinedAt,
-        })
-        .from(cellMemberships)
-        .innerJoin(profiles, eq(cellMemberships.profileId, profiles.id))
-        .innerJoin(users, eq(profiles.userId, users.id))
-        .where(and(
-          eq(cellMemberships.cellId, cellId),
-          eq(cellMemberships.active, true)
-        ))
-        .orderBy(profiles.fullName)
-
-      const legacyMemberCountResult = await db
-        .select({ count: count() })
-        .from(cellMemberships)
-        .where(and(
-          eq(cellMemberships.cellId, cellId),
-          eq(cellMemberships.active, true)
-        ))
-
-      cellMembers = legacyMembersResult || []
-      memberCount = (legacyMemberCountResult && legacyMemberCountResult[0]?.count) || 0
-    }
+    cellMembers = cellMembersResult || []
+    memberCount = Number(memberCountResult[0]?.count || 0)
   } catch (error) {
     console.error("Error fetching cell members:", error)
     cellMembers = []

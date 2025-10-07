@@ -4,8 +4,7 @@ import { db } from "@/lib/db"
 import { 
   events, 
   users, 
-  eventRegistrations, 
-  profiles 
+  eventRegistrations
 } from "@/lib/db/schema"
 import { eq, and, count } from "drizzle-orm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,8 +43,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   // Get user's profile
   const [userProfile] = await db
     .select()
-    .from(profiles)
-    .where(eq(profiles.userId, session.user.id!))
+    .from(users)
+    .where(eq(users.userId, session.user.id!))
     .limit(1)
 
   // Fetch event with creator info

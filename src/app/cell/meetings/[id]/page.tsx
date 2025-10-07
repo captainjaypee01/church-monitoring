@@ -6,10 +6,9 @@ import {
   meetingAttendance, 
   giving, 
   trainingProgress,
-  profiles,
+  users,
   trainingLevels,
-  cells,
-  users 
+  cells
 } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,9 +19,9 @@ import Link from "next/link"
 import Image from "next/image"
 
 interface MeetingDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
@@ -31,6 +30,8 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
   if (!session?.user) {
     redirect("/login")
   }
+
+  const { id: meetingId } = await params
 
   // Fetch meeting with related data
   const [meeting] = await db
@@ -48,7 +49,7 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
     .from(meetings)
     .innerJoin(cells, eq(meetings.cellId, cells.id))
     .innerJoin(users, eq(meetings.leaderUserId, users.id))
-    .where(eq(meetings.id, params.id))
+    .where(eq(meetings.id, meetingId))
     .limit(1)
 
   if (!meeting) {
@@ -66,35 +67,35 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
   // Fetch attendance data
   const attendance = await db
     .select({
-      profileId: meetingAttendance.profileId,
+      userId: meetingAttendance.userId,
       isVip: meetingAttendance.isVip,
       present: meetingAttendance.present,
       remarks: meetingAttendance.remarks,
-      memberName: profiles.fullName,
+      memberName: users.fullName,
     })
     .from(meetingAttendance)
-    .innerJoin(profiles, eq(meetingAttendance.profileId, profiles.id))
-    .where(eq(meetingAttendance.meetingId, params.id))
+    .innerJoin(users, eq(meetingAttendance.userId, users.id))
+    .where(eq(meetingAttendance.meetingId, meetingId))
 
   // Fetch giving data
   const [givingData] = await db
     .select()
     .from(giving)
-    .where(eq(giving.meetingId, params.id))
+    .where(eq(giving.meetingId, meetingId))
     .limit(1)
 
   // Fetch training updates
   const trainingUpdates = await db
     .select({
-      profileId: trainingProgress.profileId,
+      userId: trainingProgress.userId,
       completedAt: trainingProgress.completedAt,
       notes: trainingProgress.notes,
-      memberName: profiles.fullName,
+      memberName: users.fullName,
       levelCode: trainingLevels.code,
       levelTitle: trainingLevels.title,
     })
     .from(trainingProgress)
-    .innerJoin(profiles, eq(trainingProgress.profileId, profiles.id))
+    .innerJoin(users, eq(trainingProgress.userId, users.id))
     .innerJoin(trainingLevels, eq(trainingProgress.levelId, trainingLevels.id))
     .where(eq(trainingProgress.completedAt, meeting.occurredAt))
 
@@ -248,7 +249,7 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
         <CardContent>
           <div className="space-y-3">
             {attendance.map((member) => (
-              <div key={member.profileId} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={member.userId} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className={`w-3 h-3 rounded-full ${member.present ? 'bg-green-500' : 'bg-red-500'}`} />
                   <div>

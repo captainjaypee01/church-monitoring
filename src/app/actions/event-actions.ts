@@ -123,7 +123,7 @@ export async function createEventAction(formData: FormData) {
   }
 }
 
-export async function registerForEventAction(eventId: string, profileId: string) {
+export async function registerForEventAction(eventId: string, userId: string) {
   try {
     const session = await auth()
     
@@ -152,7 +152,7 @@ export async function registerForEventAction(eventId: string, profileId: string)
       .from(eventRegistrations)
       .where(and(
         eq(eventRegistrations.eventId, eventId),
-        eq(eventRegistrations.profileId, profileId)
+        eq(eventRegistrations.userId, userId)
       ))
       .limit(1)
 
@@ -175,7 +175,7 @@ export async function registerForEventAction(eventId: string, profileId: string)
     // Create registration
     await db.insert(eventRegistrations).values({
       eventId,
-      profileId,
+      userId,
       status: "REGISTERED",
     } satisfies NewEventRegistration)
 
@@ -187,7 +187,7 @@ export async function registerForEventAction(eventId: string, profileId: string)
       subjectId: eventId,
       meta: {
         eventId,
-        profileId,
+        userId,
         action: "registered",
       },
     } satisfies NewAuditLog)
@@ -210,7 +210,7 @@ export async function registerForEventAction(eventId: string, profileId: string)
   }
 }
 
-export async function cancelEventRegistrationAction(eventId: string, profileId: string) {
+export async function cancelEventRegistrationAction(eventId: string, userId: string) {
   try {
     const session = await auth()
     
@@ -223,7 +223,7 @@ export async function cancelEventRegistrationAction(eventId: string, profileId: 
       .delete(eventRegistrations)
       .where(and(
         eq(eventRegistrations.eventId, eventId),
-        eq(eventRegistrations.profileId, profileId)
+        eq(eventRegistrations.userId, userId)
       ))
 
     // Create audit log
@@ -234,7 +234,7 @@ export async function cancelEventRegistrationAction(eventId: string, profileId: 
       subjectId: eventId,
       meta: {
         eventId,
-        profileId,
+        userId,
         action: "cancelled",
       },
     } satisfies NewAuditLog)

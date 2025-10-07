@@ -78,7 +78,7 @@ export function canManageNetworks(session: Session): boolean {
 }
 
 export function canManageCells(session: Session): boolean {
-  return hasRole(session, "ADMIN") || isNetworkLeader(session)
+  return hasRole(session, "ADMIN") || isNetworkLeader(session) || isCellLeader(session)
 }
 
 export function canManageUsers(session: Session): boolean {
@@ -95,6 +95,39 @@ export function canViewCellReports(session: Session, cellId: string): boolean {
 
 export function canViewNetworkReports(session: Session, networkId: string): boolean {
   return hasRole(session, "ADMIN") || isNetworkLeader(session, networkId)
+}
+
+export function canManageNetworkOverview(session: Session, networkId?: string): boolean {
+  if (hasRole(session, "ADMIN")) return true
+  if (isNetworkLeader(session, networkId)) return true
+  return false
+}
+
+export function canViewNetworkOverview(session: Session, networkId?: string): boolean {
+  if (hasRole(session, "ADMIN")) return true
+  if (isNetworkLeader(session, networkId)) return true
+  if (isCellLeader(session) && session.userData?.networkId === networkId) return true
+  return false
+}
+
+export function canManageCellMembers(session: Session, cellId?: string): boolean {
+  if (hasRole(session, "ADMIN")) return true
+  if (isNetworkLeader(session)) return true
+  if (isCellLeader(session, cellId)) return true
+  return false
+}
+
+export function canAssignMembersToNetwork(session: Session): boolean {
+  if (hasRole(session, "ADMIN")) return true
+  if (isNetworkLeader(session)) return true
+  return false
+}
+
+export function canAssignMembersToCell(session: Session, cellId?: string): boolean {
+  if (hasRole(session, "ADMIN")) return true
+  if (isNetworkLeader(session)) return true
+  if (isCellLeader(session, cellId)) return true
+  return false
 }
 
 // Legacy function for backward compatibility
@@ -116,6 +149,13 @@ export function ability(context: AbilityContext) {
     canLogCellMeeting: (cellId: string) => canLogCellMeeting(session, cellId),
     canViewCellReports: (cellId: string) => canViewCellReports(session, cellId),
     canViewNetworkReports: (networkId: string) => canViewNetworkReports(session, networkId),
+    
+    // New network and cell management permissions
+    canManageNetworkOverview: (networkId?: string) => canManageNetworkOverview(session, networkId),
+    canViewNetworkOverview: (networkId?: string) => canViewNetworkOverview(session, networkId),
+    canManageCellMembers: (cellId?: string) => canManageCellMembers(session, cellId),
+    canAssignMembersToNetwork: () => canAssignMembersToNetwork(session),
+    canAssignMembersToCell: (cellId?: string) => canAssignMembersToCell(session, cellId),
     
     // User role checks
     isAdmin: () => isAdmin(session),

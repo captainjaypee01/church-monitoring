@@ -91,7 +91,7 @@ export async function logMeetingAction(formData: FormData) {
     // 2. Record attendance
     const attendanceData: NewMeetingAttendance[] = data.attendance.map(item => ({
       meetingId: meeting.id,
-      profileId: item.profileId,
+      userId: item.profileId, // Changed from profileId to userId
       isVip: item.isVip,
       present: item.present,
       remarks: item.remarks || null,
@@ -114,7 +114,7 @@ export async function logMeetingAction(formData: FormData) {
     // 4. Record training progress updates
     if (data.trainingUpdates.length > 0) {
       const trainingData: NewTrainingProgress[] = data.trainingUpdates.map(update => ({
-        profileId: update.profileId,
+        userId: update.profileId, // Changed from profileId to userId
         levelId: update.levelId,
         completedAt: new Date(),
         notes: update.notes || null,

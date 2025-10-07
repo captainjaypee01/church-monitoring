@@ -8,7 +8,7 @@ import {
   giving, 
   eventRegistrations,
   events,
-  profiles,
+  users,
   networks,
   cells,
   trainingProgress,
@@ -51,8 +51,8 @@ export default async function AdminReportsPage() {
   // Fetch key metrics
   const [totalMembers] = await db
     .select({ count: count() })
-    .from(profiles)
-    .where(eq(profiles.isActive, true))
+    .from(users)
+    .where(eq(users.isActive, true))
 
   const [totalMeetings] = await db
     .select({ count: count() })

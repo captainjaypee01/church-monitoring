@@ -37,7 +37,7 @@ const navigation = [
     name: "Network Overview",
     href: "/network",
     icon: Network,
-    roles: ["ADMIN", "NETWORK_LEADER"],
+    roles: ["ADMIN", "NETWORK_LEADER", "CELL_LEADER"],
   },
   {
     name: "Events",
