@@ -56,8 +56,8 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
   }
 
   // Check permissions
-  const userCellId = session.roles?.find(role => role.cellId)?.cellId
-  const isAdmin = session.roles?.some(role => role.role === "ADMIN") || false
+  const userCellId = session.userData?.cellId
+  const isAdmin = session.userData?.role === "ADMIN" || false
   
   if (!isAdmin && userCellId !== meeting.cellId) {
     redirect("/dashboard")

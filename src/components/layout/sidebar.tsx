@@ -68,15 +68,28 @@ const navigation = [
 ]
 
 export function Sidebar() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const pathname = usePathname()
+
+  if (status === "loading") {
+    return (
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+        <div className="flex-1 flex flex-col min-h-0 bg-gray-800">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!session?.user) {
     return null
   }
 
   const permissions = getUserPermissions(session)
-  const userRoles = session.roles?.map((role) => role.role) || []
+  const userRole = session.userData?.role
+  const userRoles = userRole ? [userRole] : []
 
   const hasAccess = (roles: string[]) => {
     return roles.some((role) => userRoles.includes(role as any))
@@ -166,7 +179,7 @@ export function Sidebar() {
             <div className="ml-3">
               <p className="text-sm font-medium text-white">{session.user.name}</p>
               <p className="text-xs font-medium text-gray-300">
-                {userRoles.join(", ")}
+                {userRole || "Member"}
               </p>
             </div>
           </div>

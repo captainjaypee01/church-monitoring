@@ -97,10 +97,10 @@ export default async function AdminUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {usersWithRoles.filter(user => user.roles.length > 0 && !user.deletedAt).length}
+              {usersWithRoles.filter(user => user.role && user.role !== 'MEMBER' && !user.deletedAt).length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Users with assigned roles
+              Users with leadership roles
             </p>
           </CardContent>
         </Card>

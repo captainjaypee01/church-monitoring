@@ -13,7 +13,7 @@ export default async function CellPage() {
   }
 
   // Get user's cell
-  const userCellId = session.roles?.find(role => role.cellId)?.cellId
+  const userCellId = session.userData?.cellId
   
   if (!userCellId) {
     return (

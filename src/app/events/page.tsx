@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { events, users, eventRegistrations, profiles } from "@/lib/db/schema"
+import { events, users, eventRegistrations } from "@/lib/db/schema"
 import { desc, count, eq, and, gte } from "drizzle-orm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,8 +15,8 @@ export default async function EventsPage() {
   // Get user's profile (if authenticated)
   const [userProfile] = session?.user ? await db
     .select()
-    .from(profiles)
-    .where(eq(profiles.userId, session.user.id!))
+    .from(users)
+    .where(eq(users.id, session.user.id!))
     .limit(1) : [null]
 
   // Fetch upcoming events
@@ -58,7 +58,7 @@ export default async function EventsPage() {
           .from(eventRegistrations)
           .where(and(
             eq(eventRegistrations.eventId, event.id),
-            eq(eventRegistrations.profileId, userProfile.id)
+            eq(eventRegistrations.userId, userProfile.id)
           ))
           .limit(1)
       }
@@ -84,7 +84,7 @@ export default async function EventsPage() {
     .from(eventRegistrations)
     .innerJoin(events, eq(eventRegistrations.eventId, events.id))
     .where(and(
-      eq(eventRegistrations.profileId, userProfile.id),
+      eq(eventRegistrations.userId, userProfile.id),
       gte(events.startAt, new Date())
     ))
     .orderBy(events.startAt)

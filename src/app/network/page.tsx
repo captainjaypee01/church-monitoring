@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Users, Calendar, TrendingUp, DollarSign, BarChart3, Target } from "lucide-react"
 import Link from "next/link"
 import { db } from "@/lib/db"
-import { networks, cells, cellMemberships, profiles, meetings, meetingAttendance } from "@/lib/db/schema"
+import { networks, cells, users, meetings, meetingAttendance } from "@/lib/db/schema"
 import { eq, and, gte, count, sum } from "drizzle-orm"
 
 export default async function NetworkPage() {
@@ -17,19 +17,19 @@ export default async function NetworkPage() {
   }
 
   // Check if user is Network Leader or Admin
-  const userRoles = session.roles || []
-  const isNetworkLeaderRole = userRoles.some(role => role.role === "NETWORK_LEADER")
-  const isAdminRole = userRoles.some(role => role.role === "ADMIN")
+  const userRole = session.userData?.role
+  const isNetworkLeaderRole = userRole === "NETWORK_LEADER" || session.userData?.isNetworkLeader
+  const isAdminRole = userRole === "ADMIN"
   
   if (!isNetworkLeaderRole && !isAdminRole) {
     redirect("/dashboard")
   }
 
   // Get user's network(s)
-  const userNetworks = userRoles
-    .filter(role => role.role === "NETWORK_LEADER" || role.role === "ADMIN")
-    .map(role => role.networkId)
-    .filter(Boolean)
+  const userNetworks = []
+  if (session.userData?.networkId && (isNetworkLeaderRole || isAdminRole)) {
+    userNetworks.push(session.userData.networkId)
+  }
 
   if (userNetworks.length === 0) {
     return (

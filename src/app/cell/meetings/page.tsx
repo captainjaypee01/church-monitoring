@@ -17,7 +17,7 @@ export default async function CellMeetingsPage() {
   }
 
   // Get user's cell (assuming first cell for now)
-  const userCellId = session.roles?.find(role => role.cellId)?.cellId
+  const userCellId = session.userData?.cellId
   
   if (!userCellId) {
     redirect("/dashboard")

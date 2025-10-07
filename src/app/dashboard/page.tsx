@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   }
 
   const permissions = getUserPermissions(session)
-  const primaryRole = session.roles?.[0]?.role
+  const primaryRole = session.userData?.role
 
   // Route to appropriate dashboard based on primary role
   switch (primaryRole) {

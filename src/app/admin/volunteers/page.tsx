@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { db } from "@/lib/db"
-import { volunteerRoles, volunteerAssignments, profiles, services, events } from "@/lib/db/schema"
+import { volunteerRoles, volunteerAssignments, users, services, events } from "@/lib/db/schema"
 import { eq, count } from "drizzle-orm"
 import { HandHeart, Users, Calendar, Clock } from "lucide-react"
 import Link from "next/link"

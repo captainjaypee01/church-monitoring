@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { canLogCellMeeting } from "@/lib/rbac"
 import { NewMeetingForm } from "@/components/meetings/new-meeting-form"
 import { db } from "@/lib/db"
-import { cells, cellMemberships, profiles, trainingLevels } from "@/lib/db/schema"
+import { cells, users, trainingLevels } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 
 export default async function NewMeetingPage() {
@@ -14,7 +14,7 @@ export default async function NewMeetingPage() {
   }
 
   // Get user's cell (assuming first cell for now)
-  const userCellId = session.roles?.find(role => role.cellId)?.cellId
+  const userCellId = session.userData?.cellId
   
   if (!userCellId || !canLogCellMeeting(session, userCellId)) {
     redirect("/dashboard")

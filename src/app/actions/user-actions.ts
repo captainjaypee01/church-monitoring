@@ -54,10 +54,10 @@ export async function createUserAction(formData: FormData) {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
       password: formData.get("password") as string,
-      phone: formData.get("phone") as string,
-      gender: formData.get("gender") as string,
-      birthdate: formData.get("birthdate") as string,
-      address: formData.get("address") as string,
+      phone: (formData.get("phone") as string) || undefined,
+      gender: (formData.get("gender") as string) || undefined,
+      birthdate: (formData.get("birthdate") as string) || undefined,
+      address: (formData.get("address") as string) || undefined,
       isActive: formData.has("isActive"),
       role: (formData.get("role") as string) === "none" ? undefined : (formData.get("role") as string || undefined),
       networkId: (formData.get("networkId") as string) === "none" ? undefined : (formData.get("networkId") as string || undefined),
@@ -138,6 +138,22 @@ export async function createUserAction(formData: FormData) {
     return { success: true, userId: newUser.id }
   } catch (error) {
     console.error("User creation error:", error)
+    
+    // Handle Zod validation errors with user-friendly messages
+    if (error instanceof z.ZodError) {
+      const firstError = error.errors[0]
+      if (firstError.path[0] === "gender") {
+        return { 
+          success: false, 
+          error: "Please select a valid gender option or leave it empty" 
+        }
+      }
+      return { 
+        success: false, 
+        error: `Validation error: ${firstError.message}` 
+      }
+    }
+    
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to create user" 
@@ -161,10 +177,10 @@ export async function updateUserAction(userId: string, formData: FormData) {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
       password: formData.get("password") as string || undefined,
-      phone: formData.get("phone") as string,
-      gender: formData.get("gender") as string,
-      birthdate: formData.get("birthdate") as string,
-      address: formData.get("address") as string,
+      phone: (formData.get("phone") as string) || undefined,
+      gender: (formData.get("gender") as string) || undefined,
+      birthdate: (formData.get("birthdate") as string) || undefined,
+      address: (formData.get("address") as string) || undefined,
       isActive: formData.has("isActive"),
       role: (formData.get("role") as string) === "none" ? undefined : (formData.get("role") as string || undefined),
       networkId: (formData.get("networkId") as string) === "none" ? undefined : (formData.get("networkId") as string || undefined),
@@ -247,6 +263,22 @@ export async function updateUserAction(userId: string, formData: FormData) {
     return { success: true }
   } catch (error) {
     console.error("User update error:", error)
+    
+    // Handle Zod validation errors with user-friendly messages
+    if (error instanceof z.ZodError) {
+      const firstError = error.errors[0]
+      if (firstError.path[0] === "gender") {
+        return { 
+          success: false, 
+          error: "Please select a valid gender option or leave it empty" 
+        }
+      }
+      return { 
+        success: false, 
+        error: `Validation error: ${firstError.message}` 
+      }
+    }
+    
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to update user" 
